@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>স্মার্ট পাঠশালা</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Tiro+Bangla:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: ['attribute', '[data-theme="dark"]'],
+    theme: {
+      extend: {
+        fontFamily: {
+          bn: ['"Hind Siliguri"', 'sans-serif'],
+          display: ['"Tiro Bangla"', 'serif'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  :root {
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-dark: #4f46e5;
+    --accent-subtle: rgba(99,102,241,0.12);
+    --accent-glow: rgba(99,102,241,0.35);
+  }
+
+  /* ── Theme tokens ── */
+  [data-theme="dark"] {
+    --bg: #0d0f14;
+    --bg2: #13151c;
+    --bg3: #1a1d27;
+    --bg4: #222535;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #9ba3b8;
+    --text3: #5c6480;
+    --card-bg: #161923;
+    --card-hover: #1e2130;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.7);
+  }
+  [data-theme="light"] {
+    --bg: #f4f5fa;
+    --bg2: #ffffff;
+    --bg3: #eef0f8;
+    --bg4: #e3e6f0;
+    --border: rgba(0,0,0,0.07);
+    --border2: rgba(0,0,0,0.12);
+    --text: #1a1d2e;
+    --text2: #4a5068;
+    --text3: #9ba3b8;
+    --card-bg: #ffffff;
+    --card-hover: #f0f2fb;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Hind Siliguri', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+    overflow-x: hidden;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* ── View system ── */
+  .view { display: none; }
+  .view.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── Background mesh ── */
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, var(--accent-glow) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(139,92,246,0.15) 0%, transparent 60%);
+    opacity: 0.6;
+  }
+  [data-theme="light"] .bg-mesh { opacity: 0.25; }
+
+  /* ── Noise overlay ── */
+  .bg-noise {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .card:hover {
+    background: var(--card-hover);
+    border-color: var(--border2);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-subtle);
+  }
+
+  /* ── Class cards (View 1) ── */
+  .class-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 20px;
+    cursor: pointer;
+    transition: all 0.28s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+  .class-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-subtle), transparent);
+    opacity: 0;
+    transition: opacity 0.28s;
+  }
+  .class-card:hover::before { opacity: 1; }
+  .class-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg), 0 0 30px var(--accent-glow);
+  }
+  .class-card:active { transform: translateY(-2px); }
+
+  .class-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 28px;
+    transition: transform 0.28s;
+  }
+  .class-card:hover .class-icon { transform: scale(1.1) rotate(5deg); }
+
+  /* ── Subject cards (View 2) ── */
+  .subject-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    overflow: hidden;
+  }
+  .subject-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow), 0 0 20px var(--accent-glow);
+  }
+  .subject-card.optional-subject {
+    border-style: dashed;
+    background-image: repeating-linear-gradient(
+      -45deg, transparent, transparent 8px,
+      rgba(99,102,241,0.03) 8px, rgba(99,102,241,0.03) 16px
+    );
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    height: 4px;
+    background: var(--bg4);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+  .progress-fill.complete {
+    background: linear-gradient(90deg, #10b981, #34d399);
+  }
+
+  /* ── Sticky header ── */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  [data-theme="dark"] .sticky-header {
+    background: rgba(19,21,28,0.85);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border2);
+    color: var(--text2);
+  }
+  .btn-ghost:hover {
+    background: var(--bg3);
+    color: var(--text);
+    border-color: var(--border2);
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .btn-accent:hover {
+    background: var(--accent-dark);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .btn-icon {
+    padding: 7px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-icon:hover { background: var(--bg3); color: var(--text); }
+  .btn-icon.active {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--accent-light);
+  }
+
+  /* ── Dropdown ── */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 180px;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+    pointer-events: none;
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+  }
+  .dropdown-menu.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+  }
+  .dropdown-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Hind Siliguri', sans-serif;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dropdown-item:hover { background: var(--bg3); color: var(--text); }
+  .dropdown-item.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+  .dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── Select (division dropdown) ── */
+  .sp-select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .sp-select:focus { border-color: var(--accent); }
+
+  /* ── Toggle / Checkbox ── */
+  .sp-toggle {
+    appearance: none;
+    width: 34px; height: 20px;
+    background: var(--bg4);
+    border-radius: 99px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .sp-toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .sp-toggle:checked { background: var(--accent); }
+  .sp-toggle:checked::after { transform: translateX(14px); }
+
+  /* ── Loading overlay ── */
+  #loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+    z-index: 9999;
+    transition: opacity 0.4s;
+  }
+  #loading-overlay.hide { opacity: 0; pointer-events: none; }
+
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--bg4);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Bulk action bar ── */
+  #bulk-action-bar {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 99px;
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200;
+    white-space: nowrap;
+  }
+  #bulk-action-bar.show {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(-50%) translateY(0);
+  }
+  @media (min-width: 1024px) {
+    #bulk-action-bar { bottom: 24px; }
+  }
+
+  /* ── Mobile bottom nav ── */
+  #mobile-bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    z-index: 100;
+    padding: 8px 12px 12px;
+    gap: 4px;
+  }
+  @media (min-width: 1024px) { #mobile-bottom-nav { display: none !important; } }
+
+  .mob-nav-btn {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-family: 'Hind Siliguri', sans-serif;
+    color: var(--text3);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: all 0.18s;
+  }
+  .mob-nav-btn.active {
+    background: var(--accent-subtle);
+    color: var(--accent-light);
+  }
+  .mob-nav-btn svg { width: 20px; height: 20px; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 300;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+
+  /* ── Input ── */
+  .sp-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .sp-input:focus { border-color: var(--accent); }
+  .sp-input::placeholder { color: var(--text3); }
+
+  /* ── Textarea ── */
+  .sp-textarea {
+    width: 100%; resize: vertical; min-height: 120px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .sp-textarea:focus { border-color: var(--accent); }
+
+  /* ── Gradient text ── */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--accent-light) 0%, #c4b5fd 50%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-optional {
+    background: rgba(251,191,36,0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(251,191,36,0.25);
+  }
+  .badge-divisional {
+    background: rgba(99,102,241,0.12);
+    color: var(--accent-light);
+    border: 1px solid rgba(99,102,241,0.25);
+  }
+  .badge-required {
+    background: rgba(16,185,129,0.1);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 4px 0;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Edit mode drag handle ── */
+  .drag-handle {
+    opacity: 0;
+    cursor: grab;
+    transition: opacity 0.15s;
+    color: var(--text3);
+  }
+  .subject-card:hover .drag-handle { opacity: 1; }
+  .subject-card.dragging {
+    opacity: 0.5;
+    scale: 0.97;
+  }
+  .subject-card.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  /* ── Checkbox ── */
+  .sp-checkbox {
+    appearance: none;
+    width: 16px; height: 16px;
+    border: 2px solid var(--border2);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .sp-checkbox:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .sp-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 4px;
+    width: 5px; height: 9px;
+    border: 2px solid #fff;
+    border-top: none; border-left: none;
+    transform: rotate(45deg);
+  }
+
+  /* ── Stagger animation ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fadeUp 0.4s cubic-bezier(0.4,0,0.2,1) both; }
+
+  /* ── Tooltip ── */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%; transform: translateX(-50%);
+    background: var(--bg4);
+    color: var(--text);
+    font-size: 11px;
+    font-family: 'Hind Siliguri', sans-serif;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    /* prevent overflow off screen edges */
+    max-width: 180px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+  /* Right-edge tooltips flip left */
+  [data-tip-left]::after {
+    left: auto; right: 0; transform: none;
+  }
+  /* Ensure tooltip stays inside viewport on right-side elements */
+  .sticky-header [data-tip]::after,
+  .top-bar-right [data-tip]::after {
+    left: auto; right: 0; transform: none;
+  }
+
+  /* ── Primary row 5-col → mobile 3+2 wrap ── */
+  @media (max-width: 640px) {
+    #row-primary {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+    #row-junior {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+    #row-senior {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+  }
+
+  /* ── Class card mobile compact ── */
+  @media (max-width: 640px) {
+    .class-card {
+      padding: 14px 8px !important;
+    }
+    .class-icon {
+      width: 44px !important;
+      height: 44px !important;
+      margin-bottom: 8px !important;
+    }
+    .class-icon svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+    .class-card p:first-of-type {
+      font-size: 13px !important;
+    }
+    .class-card p:last-of-type {
+      font-size: 10px !important;
+    }
+  }
+
+  /* ── Pb for mobile nav ── */
+  .with-mobile-nav { padding-bottom: 72px; }
+  @media (min-width: 1024px) { .with-mobile-nav { padding-bottom: 0; } }
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-mesh" aria-hidden="true"></div>
+<div class="bg-noise" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="text-align:center">
+    <p style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">ডাটাবেস তৈরি হচ্ছে...</p>
+    <p style="font-size:14px;color:var(--text2)">ফাইল ফেচিং ও প্রসেসিং চলছে</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW 1 — শ্রেণী নির্বাচন
+══════════════════════════════════════════ -->
+<div id="view-classes" class="view active">
+  <div class="relative z-10 flex flex-col min-h-screen with-mobile-nav">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between px-4 lg:px-8 py-4">
+      <div class="flex items-center gap-2" style="color:var(--accent-light)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span style="font-family:'Tiro Bangla',serif;font-size:18px;font-weight:500;color:var(--text)">পাঠশালা</span>
+      </div>
+      <button class="btn-icon" onclick="toggleTheme()" data-tip="থিম পরিবর্তন">
+        <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+
+    <!-- Cards area -->
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-6 lg:py-12">
+
+      <!-- Primary row (১ম–৫ম) -->
+      <div class="w-full max-w-5xl mb-5 anim-fade-up" style="animation-delay:0.1s">
+        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">প্রাথমিক শ্রেণী</p>
+        <div id="row-primary" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(5,1fr)">
+          <div class="class-card" onclick="selectClass('1')">
+            <div class="class-icon" style="background:rgba(16,185,129,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">প্রথম শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 1</p>
+          </div>
+          <div class="class-card" onclick="selectClass('2')">
+            <div class="class-icon" style="background:rgba(52,211,153,0.12)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">দ্বিতীয় শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 2</p>
+          </div>
+          <div class="class-card" onclick="selectClass('3')">
+            <div class="class-icon" style="background:rgba(14,165,233,0.12)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">তৃতীয় শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 3</p>
+          </div>
+          <div class="class-card" onclick="selectClass('4')">
+            <div class="class-icon" style="background:rgba(245,158,11,0.12)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">চতুর্থ শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 4</p>
+          </div>
+          <div class="class-card" onclick="selectClass('5')">
+            <div class="class-icon" style="background:rgba(236,72,153,0.12)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f9a8d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">পঞ্চম শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 5</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Junior row (৬ষ্ঠ–৮ম) -->
+      <div class="w-full max-w-5xl mb-5 anim-fade-up" style="animation-delay:0.18s">
+        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">মাধ্যমিক শ্রেণী</p>
+        <div id="row-junior" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+          <div class="class-card" onclick="selectClass('6')">
+            <div class="class-icon" style="background:rgba(99,102,241,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">ষষ্ঠ শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 6</p>
+          </div>
+          <div class="class-card" onclick="selectClass('7')">
+            <div class="class-icon" style="background:rgba(168,85,247,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">সপ্তম শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 7</p>
+          </div>
+          <div class="class-card" onclick="selectClass('8')">
+            <div class="class-icon" style="background:rgba(20,184,166,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">অষ্টম শ্রেণী</p>
+            <p style="font-size:11px;color:var(--text3)">Class 8</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Senior + Admission row -->
+      <div class="w-full max-w-5xl anim-fade-up" style="animation-delay:0.26s">
+        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">উচ্চমাধ্যমিক ও ভর্তি</p>
+        <div id="row-senior" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+          <div class="class-card" onclick="selectClass('9')">
+            <div class="class-icon" style="background:rgba(251,146,60,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5m4 0h10m-10 0v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">এসএসসি</p>
+            <p style="font-size:11px;color:var(--text3)">নবম–দশম (9–10)</p>
+          </div>
+          <div class="class-card" onclick="selectClass('11')">
+            <div class="class-icon" style="background:rgba(236,72,153,0.15)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">এইচএসসি</p>
+            <p style="font-size:11px;color:var(--text3)">একাদশ–দ্বাদশ (11–12)</p>
+          </div>
+          <div class="class-card" onclick="selectClass('admission')">
+            <div class="class-icon" style="background:rgba(99,102,241,0.2);box-shadow:0 0 20px var(--accent-glow)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
+            </div>
+            <p style="font-weight:600;font-size:15px;color:var(--accent-light);margin-bottom:2px">ভর্তি</p>
+            <p style="font-size:11px;color:var(--text3)">Admission</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav (home) -->
+  <div id="mobile-bottom-nav">
+    <button class="mob-nav-btn active" onclick="">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>হোম</span>
+    </button>
+    <button class="mob-nav-btn" onclick="openStatsModal()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>পরিসংখ্যান</span>
+    </button>
+    <button class="mob-nav-btn" onclick="openToolsDropdown('home')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M5.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      <span>সেটিংস</span>
+    </button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     VIEW 2 — সাবজেক্ট নির্বাচন
+══════════════════════════════════════════ -->
+<div id="view-subjects" class="view">
+  <div class="relative z-10 flex flex-col min-h-screen with-mobile-nav">
+
+    <!-- Sticky header -->
+    <div class="sticky-header px-4 lg:px-8 py-3">
+      <div class="flex items-center gap-3 flex-wrap" style="max-width:1100px;margin:0 auto">
+
+        <!-- Left: back + title -->
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <button class="btn-icon flex-shrink-0" onclick="goHome()" data-tip="ফিরে যান">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="min-w-0">
+            <p id="subject-class-name" style="font-size:18px;font-weight:700;color:var(--accent-light);line-height:1.2"></p>
+            <p style="font-size:12px;color:var(--text3)">বিষয় নির্বাচন করুন</p>
+          </div>
+        </div>
+
+        <!-- Right: action buttons -->
+        <div class="flex items-center gap-2 flex-wrap">
+
+          <!-- Division dropdown (class 9 & 11 only) -->
+          <select id="division-select" class="sp-select hidden" onchange="onDivisionChange(this.value)">
+            <option value="1">বিজ্ঞান</option>
+            <option value="2">মানবিক</option>
+            <option value="3">ব্যবসায় শিক্ষা</option>
+          </select>
+
+          <!-- Optional toggle -->
+          <label class="flex items-center gap-2 cursor-pointer" style="font-size:13px;color:var(--text2)">
+            <input type="checkbox" class="sp-toggle" id="optional-toggle" onchange="onOptionalToggle(this.checked)">
+            <span class="hidden sm:inline">ঐচ্ছিক বিষয়</span>
+          </label>
+
+          <!-- Edit mode -->
+          <button class="btn btn-ghost" id="edit-mode-btn" onclick="toggleEditMode()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <span class="hidden sm:inline">এডিট</span>
+          </button>
+
+          <!-- Add dropdown -->
+          <div class="relative">
+            <button class="btn btn-accent" onclick="toggleDropdown('add-dropdown')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>যুক্ত করুন</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="dropdown-menu" id="add-dropdown">
+              <div class="dropdown-item" onclick="openModal('modal-add-subject'); closeDropdown('add-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                ম্যানুয়াল যোগ
+              </div>
+              <div class="dropdown-item" onclick="openModal('modal-bulk-import'); closeDropdown('add-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                বাল্ক ইম্পোর্ট
+              </div>
+              <div class="dropdown-item" onclick="exportSubjects(); closeDropdown('add-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                বাল্ক এক্সপোর্ট
+              </div>
+            </div>
+          </div>
+
+          <!-- Tools menu -->
+          <div class="relative">
+            <button class="btn-icon" onclick="toggleDropdown('tools-dropdown')" data-tip="টুলস">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M5.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </button>
+            <div class="dropdown-menu" id="tools-dropdown" style="min-width:200px">
+              <div class="dropdown-item" onclick="openRestoreModal(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                রিস্টোর ডাটা
+              </div>
+              <div class="dropdown-item" onclick="backupData(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                ব্যাকআপ
+              </div>
+              <div class="dropdown-item" onclick="openStatsModal(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                পরিসংখ্যান
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" onclick="toggleTheme(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>
+                লাইট/ডার্ক
+              </div>
+              <div class="dropdown-item" onclick="openColorPicker(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                রঙ থিম
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item danger" onclick="confirmReset(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                রিসেট
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject grid area -->
+    <div class="flex-1 px-4 lg:px-8 py-6" style="max-width:1100px;margin:0 auto;width:100%">
+
+      <!-- Divisional subjects section -->
+      <div id="divisional-section" class="hidden mb-6">
+        <p class="section-label" id="divisional-section-label">বিভাগের বিষয়</p>
+        <div id="divisional-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </div>
+
+      <!-- Required & common subjects section -->
+      <div id="required-section">
+        <p class="section-label" id="required-section-label">আবশ্যিক ও অন্যান্য</p>
+        <div id="required-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="subjects-empty" class="hidden flex flex-col items-center justify-center py-20 text-center">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        </div>
+        <p style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">কোনো বিষয় নেই</p>
+        <p style="font-size:13px;color:var(--text2)">"যুক্ত করুন" বাটন দিয়ে বিষয় যোগ করুন</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk action bar -->
+  <div id="bulk-action-bar">
+    <span id="bulk-count" style="font-size:13px;font-weight:600;color:var(--text)">০ টি নির্বাচিত</span>
+    <div style="width:1px;height:16px;background:var(--border2)"></div>
+    <button class="btn btn-ghost" onclick="bulkToggleVisibility()" style="font-size:12px;padding:5px 10px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      হাইড/শো
+    </button>
+    <button class="btn btn-ghost" onclick="bulkDelete()" style="font-size:12px;padding:5px 10px;color:#f87171;border-color:rgba(248,113,113,0.3)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      ডিলিট
+    </button>
+    <button class="btn-icon" onclick="clearBulkSelection()" style="border:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Mobile nav for subject view -->
+  <div id="mobile-bottom-nav"></div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════ -->
+
+<!-- Add Subject Modal -->
+<div class="modal-backdrop" id="modal-add-subject">
+  <div class="modal-box">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">নতুন বিষয় যোগ করুন</p>
+      <button class="btn-icon" onclick="closeModal('modal-add-subject')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px">বিষয়ের নাম</label>
+        <input type="text" id="add-subject-name" class="sp-input" placeholder="যেমন: বাংলা, গণিত">
+      </div>
+      <div>
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px">বিষয়ের ধরন</label>
+        <select id="add-subject-type" class="sp-select" style="width:100%">
+          <option value="required">আবশ্যিক</option>
+          <option value="optional">ঐচ্ছিক</option>
+          <option value="1">বিজ্ঞান বিভাগীয়</option>
+          <option value="2">মানবিক বিভাগীয়</option>
+          <option value="3">বাণিজ্য বিভাগীয়</option>
+          <option value="12">বিজ্ঞান ও মানবিক</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-subject')">বাতিল</button>
+      <button class="btn btn-accent" onclick="addSubjectManual()">যোগ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Import Modal -->
+<div class="modal-backdrop" id="modal-bulk-import">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">বাল্ক ইম্পোর্ট</p>
+      <button class="btn-icon" onclick="closeModal('modal-bulk-import')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;color:var(--text2);line-height:1.8">
+        <strong style="color:var(--text)">ফরম্যাট:</strong><br>
+        <code style="font-family:monospace;color:var(--accent-light)">বাংলা</code> → আবশ্যিক<br>
+        <code style="font-family:monospace;color:var(--accent-light)">** ক্যারিয়ার শিক্ষা</code> → ঐচ্ছিক<br>
+        <code style="font-family:monospace;color:var(--accent-light)">!1 পদার্থবিজ্ঞান</code> → বিজ্ঞান বিভাগ<br>
+        <code style="font-family:monospace;color:var(--accent-light)">!2 পৌরনীতি</code> → মানবিক বিভাগ<br>
+        <code style="font-family:monospace;color:var(--accent-light)">!3 হিসাববিজ্ঞান</code> → ব্যবসায় শিক্ষা<br>
+        <code style="font-family:monospace;color:var(--accent-light)">!12 ইতিহাস</code> → বিজ্ঞান ও মানবিক
+      </div>
+      <textarea id="bulk-import-text" class="sp-textarea" placeholder="প্রতি লাইনে একটি বিষয়..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-bulk-import')">বাতিল</button>
+      <button class="btn btn-accent" onclick="bulkImportSubjects()">ইম্পোর্ট করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Modal -->
+<div class="modal-backdrop" id="modal-restore">
+  <div class="modal-box">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">ডাটা রিস্টোর করুন</p>
+      <button class="btn-icon" onclick="closeModal('modal-restore')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">JSON ব্যাকআপ ফাইল আপলোড করুন। বর্তমান ডাটা প্রতিস্থাপিত হবে।</p>
+      <input type="file" id="restore-file-input" accept=".json" class="sp-input" style="padding:8px">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-restore')">বাতিল</button>
+      <button class="btn btn-accent" onclick="restoreData()">রিস্টোর করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Color Picker Modal -->
+<div class="modal-backdrop" id="modal-color">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">রঙ থিম বেছে নিন</p>
+      <button class="btn-icon" onclick="closeModal('modal-color')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="grid grid-cols-3 gap-3" id="color-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Reset Modal -->
+<div class="modal-backdrop" id="modal-confirm-reset">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:#f87171">⚠️ রিসেট নিশ্চিত করুন</p>
+      <button class="btn-icon" onclick="closeModal('modal-confirm-reset')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text2);line-height:1.7">সমস্ত ডাটা (বিষয়, চ্যাপ্টার, অগ্রগতি, AI চ্যাট) মুছে যাবে। এই কাজ পূর্বাবস্থায় ফেরানো যাবে না।</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm-reset')">বাতিল</button>
+      <button class="btn" style="background:#ef4444;color:#fff;border:none" onclick="doReset()">হ্যাঁ, রিসেট করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" style="
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 20px;font-size:13px;color:var(--text);
+  box-shadow:var(--shadow-lg);z-index:9999;
+  opacity:0;pointer-events:none;transition:all 0.22s;white-space:nowrap;
+"></div>
+
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ── Constants ──────────────────────────────
+const LS_DATA    = 'smartPathshalaData_v2';
+const LS_PROG    = 'smartPathshala_progress';
+const LS_STATS   = 'smartPathshala_stats';
+const LS_LAST    = 'smartPathshala_lastRead';
+const LS_THEME   = 'theme';
+const LS_COLOR   = 'sp_color_theme';
+
+const CLASS_NAMES = {
+  '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
+  '4': 'চতুর্থ শ্রেণী', '5': 'পঞ্চম শ্রেণী',
+  '6': 'ষষ্ঠ শ্রেণী', '7': 'সপ্তম শ্রেণী', '8': 'অষ্টম শ্রেণী',
+  '9': 'এসএসসি (নবম-দশম)', '11': 'এইচএসসি (একাদশ-দ্বাদশ)',
+  'admission': 'ভর্তি পরীক্ষা'
+};
+const DIVISION_NAMES = { '1': 'বিজ্ঞান', '2': 'মানবিক', '3': 'ব্যবসায় শিক্ষা' };
+
+const COLOR_THEMES = {
+  indigo:  { accent:'#6366f1', light:'#818cf8', dark:'#4f46e5', glow:'rgba(99,102,241,0.35)',  subtle:'rgba(99,102,241,0.12)',  label:'ইন্ডিগো' },
+  rose:    { accent:'#f43f5e', light:'#fb7185', dark:'#e11d48', glow:'rgba(244,63,94,0.35)',   subtle:'rgba(244,63,94,0.12)',   label:'রোজ' },
+  emerald: { accent:'#10b981', light:'#34d399', dark:'#059669', glow:'rgba(16,185,129,0.35)',  subtle:'rgba(16,185,129,0.12)',  label:'এমারেল্ড' },
+  amber:   { accent:'#f59e0b', light:'#fbbf24', dark:'#d97706', glow:'rgba(245,158,11,0.35)',  subtle:'rgba(245,158,11,0.12)',  label:'অ্যাম্বার' },
+  sky:     { accent:'#0ea5e9', light:'#38bdf8', dark:'#0284c7', glow:'rgba(14,165,233,0.35)',  subtle:'rgba(14,165,233,0.12)',  label:'স্কাই' },
+  purple:  { accent:'#a855f7', light:'#c084fc', dark:'#9333ea', glow:'rgba(168,85,247,0.35)',  subtle:'rgba(168,85,247,0.12)',  label:'পার্পেল' },
+};
+
+// ── State ──────────────────────────────────
+let appData       = null; // { classes: { '6': { name, subjects:[] } } }
+let progressData  = {};
+let currentClass  = null;
+let currentDiv    = '1';
+let showOptional  = false;
+let editMode      = false;
+let selectedCards = new Set();
+let dragSrc       = null;
+
+// ── Boot ───────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  applyStoredTheme();
+  applyStoredColor();
+  buildColorGrid();
+
+  const stored = localStorage.getItem(LS_DATA);
+  if (stored) {
+    try {
+      appData = JSON.parse(stored);
+      progressData = JSON.parse(localStorage.getItem(LS_PROG) || '{}');
+      hideLoading();
+      showView('view-classes');
+      renderHomeStats();
+    } catch(e) {
+      await importFromIndex();
+    }
+  } else {
+    await importFromIndex();
+  }
+
+  handleHash();
+  window.addEventListener('hashchange', handleHash);
+});
+
+// ── Loading ────────────────────────────────
+function hideLoading() {
+  const el = document.getElementById('loading-overlay');
+  el.classList.add('hide');
+  setTimeout(() => el.remove(), 400);
+}
+
+// ── Auto-import from index/ folder ────────
+async function importFromIndex() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+
+  const classIds = ['1','2','3','4','5','6','7','8','9','11','admission'];
+  appData = { classes: {} };
+
+  for (const cid of classIds) {
+    const className = CLASS_NAMES[cid];
+    appData.classes[cid] = { name: className, subjects: [] };
+    try {
+      const res = await fetch(`index/class${cid}.txt`);
+      if (!res.ok) continue;
+      const text = await res.text();
+      appData.classes[cid].subjects = parseTxtSubjects(text, cid);
+    } catch(e) { /* file not found, skip */ }
+  }
+
+  saveData();
+  progressData = JSON.parse(localStorage.getItem(LS_PROG) || '{}');
+  hideLoading();
+  showView('view-classes');
+  renderHomeStats();
+}
+
+// ── TXT Parser ────────────────────────────
+// Format: Each subject on its own line (with optional prefix),
+// chapters indented below using 2 spaces or tab per level
+function parseTxtSubjects(text, classId) {
+  const lines = text.split('\n');
+  const subjects = [];
+  let current = null;
+
+  for (let line of lines) {
+    if (!line.trim()) continue;
+
+    // Check if it's a subject line (no leading whitespace or starts with prefix)
+    const indent = line.match(/^(\s*)/)[1].length;
+    if (indent === 0) {
+      // It's a subject line
+      const { name, type } = parseSubjectLine(line.trim());
+      current = { id: genId('s' + classId + '_'), name, type, chapters: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } };
+      subjects.push(current);
+    } else if (current) {
+      // It's a chapter line — handled recursively per subject
+      // We'll do a second-pass chapter parse
+    }
+  }
+
+  // Second pass: parse chapters per subject block
+  let subjectStarts = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const indent = line.match(/^(\s*)/)[1].length;
+    if (indent === 0) subjectStarts.push(i);
+  }
+
+  for (let s = 0; s < subjectStarts.length; s++) {
+    const start = subjectStarts[s] + 1;
+    const end   = s + 1 < subjectStarts.length ? subjectStarts[s + 1] : lines.length;
+    const chLines = lines.slice(start, end).filter(l => l.trim());
+    subjects[s].chapters = parseChapterLines(chLines, 0);
+  }
+
+  return subjects;
+}
+
+function parseSubjectLine(raw) {
+  // Optional: ** prefix
+  if (raw.startsWith('**')) return { name: raw.slice(2).trim(), type: 'optional' };
+  // Divisional: !1, !2, !3, !12, !1* etc.
+  const divMatch = raw.match(/^!([123]+)(\*?)\s+(.+)/);
+  if (divMatch) return { name: divMatch[3].trim(), type: divMatch[1] + (divMatch[2] || '') };
+  // Required: * prefix or plain
+  if (raw.startsWith('* ')) return { name: raw.slice(2).trim(), type: 'required' };
+  return { name: raw.trim(), type: 'required' };
+}
+
+function parseChapterLines(lines, baseDepth) {
+  if (!lines.length) return [];
+  const minIndent = Math.min(...lines.map(l => l.match(/^(\s*)/)[1].length));
+  const groups = [];
+  let cur = null;
+  let curLines = [];
+
+  for (const line of lines) {
+    const indent = line.match(/^(\s*)/)[1].length;
+    if (indent === minIndent) {
+      if (cur) { cur.children = parseChapterLines(curLines, minIndent + 1); groups.push(cur); }
+      cur = { id: genId('ch_'), title: line.trim(), children: [] };
+      curLines = [];
+    } else if (cur) {
+      curLines.push(line);
+    }
+  }
+  if (cur) { cur.children = parseChapterLines(curLines, minIndent + 1); groups.push(cur); }
+  return groups;
+}
+
+// ── ID generator ─────────────────────────
+function genId(prefix = '') {
+  return prefix + Math.random().toString(36).slice(2, 9);
+}
+
+// ── Storage ────────────────────────────────
+function saveData() { localStorage.setItem(LS_DATA, JSON.stringify(appData)); }
+function saveProgress() { localStorage.setItem(LS_PROG, JSON.stringify(progressData)); }
+
+// ── View switching ─────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Hash routing ──────────────────────────
+function handleHash() {
+  const hash = location.hash.replace('#/', '').replace('#', '');
+  const parts = hash.split('/').filter(Boolean);
+  if (!parts.length) { showView('view-classes'); return; }
+  const cid = parts[0];
+  if (CLASS_NAMES[cid]) {
+    selectClass(cid, false);
+    // future: if parts[1] → open subject etc.
+  }
+}
+
+function setHash(path) {
+  history.pushState(null, '', '#/' + path);
+}
+
+// ── Home screen ────────────────────────────
+function goHome() {
+  setHash('');
+  showView('view-classes');
+  renderHomeStats();
+}
+
+function renderHomeStats() {
+  if (!appData) return;
+  const el = document.getElementById('home-stats');
+  if (!el) return;
+  let totalSubjects = 0, totalChapters = 0, doneChapters = 0;
+  for (const cid in appData.classes) {
+    const cls = appData.classes[cid];
+    for (const sub of cls.subjects) {
+      totalSubjects++;
+      const leaves = countLeaves(sub.chapters);
+      totalChapters += leaves;
+    }
+  }
+  doneChapters = Object.keys(progressData).length;
+  el.innerHTML = `
+    <span>📚 ${totalSubjects} বিষয়</span>
+    <span style="color:var(--border2)">|</span>
+    <span>📖 ${totalChapters} অধ্যায়</span>
+    <span style="color:var(--border2)">|</span>
+    <span style="color:var(--accent-light)">✅ ${doneChapters} সম্পন্ন</span>
+  `;
+}
+
+function countLeaves(chapters) {
+  if (!chapters || !chapters.length) return 0; // if it itself is a leaf, count outside
+  let count = 0;
+  for (const ch of chapters) {
+    if (!ch.children || !ch.children.length) count++;
+    else count += countLeaves(ch.children);
+  }
+  return count;
+}
+
+// ── Select class → View 2 ─────────────────
+function selectClass(classId, updateHash = true) {
+  currentClass = classId;
+  currentDiv   = '1';
+  showOptional = false;
+  editMode     = false;
+  selectedCards.clear();
+
+  if (updateHash) setHash(classId);
+
+  // Header title
+  document.getElementById('subject-class-name').textContent = CLASS_NAMES[classId] || classId;
+
+  // Division dropdown: only for class 9 and 11
+  const divSel = document.getElementById('division-select');
+  if (classId === '9' || classId === '11') {
+    divSel.classList.remove('hidden');
+    divSel.value = '1';
+  } else {
+    divSel.classList.add('hidden');
+  }
+
+  // Optional toggle reset
+  document.getElementById('optional-toggle').checked = false;
+
+  // Edit btn reset
+  const editBtn = document.getElementById('edit-mode-btn');
+  editBtn.classList.remove('active');
+  editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="hidden sm:inline">এডিট</span>`;
+
+  hideBulkBar();
+  showView('view-subjects');
+  renderSubjects();
+}
+
+// ── Render subject grid ────────────────────
+function renderSubjects() {
+  if (!appData || !currentClass) return;
+  const cls = appData.classes[currentClass];
+  if (!cls) return;
+
+  const subjects = cls.subjects;
+  const isDivisional = (currentClass === '9' || currentClass === '11');
+
+  const divisionalSection = document.getElementById('divisional-section');
+  const divGrid           = document.getElementById('divisional-grid');
+  const reqSection        = document.getElementById('required-section');
+  const reqGrid           = document.getElementById('required-grid');
+  const emptyState        = document.getElementById('subjects-empty');
+
+  divGrid.innerHTML = '';
+  reqGrid.innerHTML = '';
+
+  // Classify subjects
+  const divSubjects  = [];
+  const reqSubjects  = [];
+
+  for (const sub of subjects) {
+    if (sub.hidden) continue;
+    const vis = isSubjectVisible(sub);
+    if (!vis) continue;
+
+    if (isDivisional && isDivisionalSubject(sub.type)) {
+      divSubjects.push(sub);
+    } else {
+      reqSubjects.push(sub);
+    }
+  }
+
+  // Render
+  if (isDivisional && divSubjects.length) {
+    divisionalSection.classList.remove('hidden');
+    document.getElementById('divisional-section-label').textContent = DIVISION_NAMES[currentDiv] + '-এর বিষয়';
+    divSubjects.forEach((sub, i) => {
+      divGrid.appendChild(createSubjectCard(sub, i));
+    });
+  } else {
+    divisionalSection.classList.add('hidden');
+  }
+
+  if (reqSubjects.length) {
+    reqSection.style.display = '';
+    if (!isDivisional || !divSubjects.length) {
+      document.getElementById('required-section-label').textContent = 'সব বিষয়';
+    } else {
+      document.getElementById('required-section-label').textContent = 'আবশ্যিক ও অন্যান্য';
+    }
+    reqSubjects.forEach((sub, i) => {
+      reqGrid.appendChild(createSubjectCard(sub, i));
+    });
+  } else {
+    reqSection.style.display = '';
+  }
+
+  const total = divSubjects.length + reqSubjects.length;
+  emptyState.classList.toggle('hidden', total > 0);
+
+  // Drag & drop if edit mode
+  if (editMode) setupDragDrop();
+}
+
+function isSubjectVisible(sub) {
+  const type = sub.type || 'required';
+  // Optional subjects
+  const isOpt = type === 'optional' || type.includes('*');
+  if (isOpt && !showOptional) return false;
+
+  // Divisional subjects
+  if (isDivisionalSubject(type)) {
+    const divs = type.replace('*', '').split('');
+    return divs.includes(currentDiv);
+  }
+  return true;
+}
+
+function isDivisionalSubject(type) {
+  return /^[123]+\*?$/.test(type);
+}
+
+// ── Subject card ──────────────────────────
+function createSubjectCard(sub, idx) {
+  const card = document.createElement('div');
+  card.className = 'subject-card anim-fade-up';
+  card.style.animationDelay = (idx * 0.04) + 's';
+  card.dataset.subId = sub.id;
+  if (sub.type === 'optional' || (sub.type && sub.type.includes('*'))) {
+    card.classList.add('optional-subject');
+  }
+
+  const progress = calcProgress(sub);
+  const progressPct = Math.round(progress * 100);
+  const isComplete  = progressPct === 100;
+
+  const badge = getBadgeHTML(sub.type);
+
+  card.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      ${editMode ? `<input type="checkbox" class="sp-checkbox mt-1 flex-shrink-0" onchange="onCardSelect(this,'${sub.id}')" ${selectedCards.has(sub.id)?'checked':''}>` : ''}
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <p style="font-weight:600;font-size:15px;color:var(--text)">${sub.name}</p>
+          ${badge}
+        </div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">${countLeaves(sub.chapters)} টি অধ্যায়</p>
+        <div class="progress-bar">
+          <div class="progress-fill ${isComplete?'complete':''}" style="width:${progressPct}%"></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">${progressPct}% সম্পন্ন</p>
+      </div>
+      ${editMode ? `<div class="drag-handle" title="টেনে সরান">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>` : ''}
+    </div>
+  `;
+
+  if (!editMode) {
+    card.onclick = () => openReader(sub);
+  }
+
+  return card;
+}
+
+function getBadgeHTML(type) {
+  if (!type || type === 'required') return `<span class="badge badge-required">আবশ্যিক</span>`;
+  if (type === 'optional') return `<span class="badge badge-optional">ঐচ্ছিক</span>`;
+  if (/^[123]/.test(type)) {
+    const isOpt = type.includes('*');
+    return `<span class="badge badge-divisional">${isOpt ? 'বিভাগীয় ঐচ্ছিক' : 'বিভাগীয়'}</span>`;
+  }
+  return '';
+}
+
+function calcProgress(sub) {
+  const leaves = getAllLeafIds(sub.chapters, currentClass, sub.id);
+  if (!leaves.length) return 0;
+  const done = leaves.filter(id => progressData[id]).length;
+  return done / leaves.length;
+}
+
+function getAllLeafIds(chapters, cid, sid) {
+  const ids = [];
+  function walk(chs) {
+    for (const ch of chs) {
+      if (!ch.children || !ch.children.length) {
+        ids.push(`${cid}_${sid}_${ch.id}`);
+      } else {
+        walk(ch.children);
+      }
+    }
+  }
+  walk(chapters);
+  return ids;
+}
+
+// ── Division & optional controls ──────────
+function onDivisionChange(val) {
+  currentDiv = val;
+  renderSubjects();
+}
+
+function onOptionalToggle(checked) {
+  showOptional = checked;
+  renderSubjects();
+}
+
+// ── Edit mode ─────────────────────────────
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn = document.getElementById('edit-mode-btn');
+  btn.classList.toggle('active', editMode);
+  selectedCards.clear();
+  hideBulkBar();
+  renderSubjects();
+}
+
+function onCardSelect(chk, subId) {
+  if (chk.checked) selectedCards.add(subId);
+  else selectedCards.delete(subId);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-action-bar');
+  const count = selectedCards.size;
+  if (count > 0) {
+    bar.classList.add('show');
+    document.getElementById('bulk-count').textContent = `${count} টি নির্বাচিত`;
+  } else {
+    hideBulkBar();
+  }
+}
+
+function hideBulkBar() {
+  document.getElementById('bulk-action-bar').classList.remove('show');
+  selectedCards.clear();
+}
+
+function clearBulkSelection() {
+  selectedCards.clear();
+  hideBulkBar();
+  renderSubjects();
+}
+
+function bulkToggleVisibility() {
+  const cls = appData.classes[currentClass];
+  cls.subjects.forEach(sub => {
+    if (selectedCards.has(sub.id)) sub.hidden = !sub.hidden;
+  });
+  saveData();
+  clearBulkSelection();
+  renderSubjects();
+}
+
+function bulkDelete() {
+  if (!confirm(`${selectedCards.size} টি বিষয় মুছে ফেলবেন?`)) return;
+  const cls = appData.classes[currentClass];
+  cls.subjects = cls.subjects.filter(sub => !selectedCards.has(sub.id));
+  saveData();
+  clearBulkSelection();
+  renderSubjects();
+}
+
+// ── Drag & drop ───────────────────────────
+function setupDragDrop() {
+  const cards = document.querySelectorAll('.subject-card');
+  cards.forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.addEventListener('dragstart', e => {
+      dragSrc = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== card) {
+        const srcId  = dragSrc.dataset.subId;
+        const dstId  = card.dataset.subId;
+        const subs   = appData.classes[currentClass].subjects;
+        const si     = subs.findIndex(s => s.id === srcId);
+        const di     = subs.findIndex(s => s.id === dstId);
+        if (si !== -1 && di !== -1) {
+          const [moved] = subs.splice(si, 1);
+          subs.splice(di, 0, moved);
+          saveData();
+          renderSubjects();
+        }
+      }
+    });
+  });
+}
+
+// ── Add subject (manual) ──────────────────
+function addSubjectManual() {
+  const name = document.getElementById('add-subject-name').value.trim();
+  const type = document.getElementById('add-subject-type').value;
+  if (!name) { showToast('বিষয়ের নাম লিখুন'); return; }
+  const cls = appData.classes[currentClass];
+  cls.subjects.push({ id: genId('s' + currentClass + '_'), name, type, chapters: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } });
+  saveData();
+  closeModal('modal-add-subject');
+  document.getElementById('add-subject-name').value = '';
+  renderSubjects();
+  showToast('✅ বিষয় যোগ হয়েছে');
+}
+
+// ── Bulk import ───────────────────────────
+function bulkImportSubjects() {
+  const raw = document.getElementById('bulk-import-text').value.trim();
+  if (!raw) { showToast('কিছু লিখুন'); return; }
+  const lines = raw.split('\n');
+  const cls   = appData.classes[currentClass];
+  let count   = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const { name, type } = parseSubjectLine(trimmed);
+    cls.subjects.push({ id: genId('s' + currentClass + '_'), name, type, chapters: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } });
+    count++;
+  }
+  saveData();
+  closeModal('modal-bulk-import');
+  document.getElementById('bulk-import-text').value = '';
+  renderSubjects();
+  showToast(`✅ ${count} টি বিষয় যোগ হয়েছে`);
+}
+
+// ── Export ────────────────────────────────
+function exportSubjects() {
+  const cls  = appData.classes[currentClass];
+  const lines = cls.subjects.map(sub => {
+    let prefix = '';
+    if (sub.type === 'optional') prefix = '** ';
+    else if (/^[123]/.test(sub.type)) prefix = '!' + sub.type + ' ';
+    return prefix + sub.name;
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `class${currentClass}_subjects.txt`;
+  a.click();
+}
+
+// ── Backup & Restore ──────────────────────
+function backupData() {
+  const payload = {
+    data: appData,
+    progress: progressData,
+    stats: JSON.parse(localStorage.getItem(LS_STATS) || '{}'),
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `pathshala_backup_${new Date().toLocaleDateString('bn-BD')}.json`;
+  a.click();
+  showToast('✅ ব্যাকআপ ডাউনলোড হচ্ছে');
+}
+
+function openRestoreModal() { openModal('modal-restore'); }
+
+function restoreData() {
+  const file = document.getElementById('restore-file-input').files[0];
+  if (!file) { showToast('ফাইল বেছে নিন'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (payload.data) {
+        appData = payload.data;
+        progressData = payload.progress || {};
+        if (payload.stats) localStorage.setItem(LS_STATS, JSON.stringify(payload.stats));
+        saveData(); saveProgress();
+        closeModal('modal-restore');
+        goHome();
+        showToast('✅ ডাটা রিস্টোর সফল');
+      } else {
+        showToast('❌ ভুল ফরম্যাট');
+      }
+    } catch { showToast('❌ ফাইল পড়া যায়নি'); }
+  };
+  reader.readAsText(file);
+}
+
+// ── Reset ─────────────────────────────────
+function confirmReset() { openModal('modal-confirm-reset'); }
+
+function doReset() {
+  localStorage.removeItem(LS_DATA);
+  localStorage.removeItem(LS_PROG);
+  localStorage.removeItem(LS_STATS);
+  localStorage.removeItem(LS_LAST);
+  closeModal('modal-confirm-reset');
+  location.reload();
+}
+
+// ── Theme ─────────────────────────────────
+function toggleTheme() {
+  const html  = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next   = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem(LS_THEME, next);
+  updateThemeIcon(next);
+}
+
+function applyStoredTheme() {
+  const saved = localStorage.getItem(LS_THEME) || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon(saved);
+}
+
+function updateThemeIcon(theme) {
+  const icon = document.getElementById('theme-icon');
+  if (!icon) return;
+  if (theme === 'dark') {
+    icon.innerHTML = `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>`;
+  } else {
+    icon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  }
+}
+
+// ── Color theme ───────────────────────────
+function applyStoredColor() {
+  const saved = localStorage.getItem(LS_COLOR) || 'indigo';
+  applyColor(saved, false);
+}
+
+function applyColor(name, save = true) {
+  const t = COLOR_THEMES[name];
+  if (!t) return;
+  const root = document.documentElement.style;
+  root.setProperty('--accent',       t.accent);
+  root.setProperty('--accent-light', t.light);
+  root.setProperty('--accent-dark',  t.dark);
+  root.setProperty('--accent-glow',  t.glow);
+  root.setProperty('--accent-subtle',t.subtle);
+  if (save) localStorage.setItem(LS_COLOR, name);
+
+  // Update active in color grid
+  document.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === name);
+  });
+}
+
+function buildColorGrid() {
+  const grid    = document.getElementById('color-grid');
+  if (!grid) return;
+  const current = localStorage.getItem(LS_COLOR) || 'indigo';
+  for (const [key, t] of Object.entries(COLOR_THEMES)) {
+    const btn = document.createElement('button');
+    btn.className = 'color-swatch';
+    btn.dataset.color = key;
+    btn.style.cssText = `
+      width:100%;padding:12px 8px;border-radius:12px;border:2px solid transparent;
+      background:${t.subtle};cursor:pointer;transition:all 0.18s;
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+    `;
+    if (key === current) btn.style.borderColor = t.accent;
+    btn.innerHTML = `
+      <div style="width:28px;height:28px;border-radius:50%;background:${t.accent}"></div>
+      <span style="font-size:11px;font-family:'Hind Siliguri',sans-serif;color:var(--text2)">${t.label}</span>
+    `;
+    btn.onclick = () => {
+      applyColor(key);
+      btn.style.borderColor = t.accent;
+      document.querySelectorAll('.color-swatch').forEach(sw => {
+        if (sw !== btn) sw.style.borderColor = 'transparent';
+      });
+      setTimeout(() => closeModal('modal-color'), 300);
+    };
+    grid.appendChild(btn);
+  }
+}
+
+function openColorPicker() { openModal('modal-color'); }
+
+// ── Placeholder functions (next phases) ───
+function openReader(sub) {
+  showToast('📖 রিডার ভিউ — পরের আপডেটে আসছে');
+}
+
+function openStatsModal() {
+  showToast('📊 পরিসংখ্যান — পরের আপডেটে আসছে');
+}
+
+function openToolsDropdown(ctx) {
+  if (ctx === 'home') openColorPicker();
+}
+
+// ── Dropdown helpers ──────────────────────
+function toggleDropdown(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+
+function closeDropdown(id) {
+  document.getElementById(id)?.classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  // Close dropdowns if click is outside any dropdown trigger
+  if (!e.target.closest('.dropdown-menu') && !e.target.closest('[onclick*="toggleDropdown"]')) {
+    document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('open'));
+  }
+});
+
+// ── Modal helpers ─────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-backdrop')) {
+    e.target.classList.remove('open');
+  }
+});
+
+// ── Toast ─────────────────────────────────
+let toastTimer;
+function showToast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(10px)';
+  }, duration);
+}
+</script>
+
+</body>
+</html>
