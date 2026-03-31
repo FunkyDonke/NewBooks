@@ -120,8 +120,8 @@
   .class-card {
     background: var(--card-bg);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px 20px;
+    border-radius: 16px;
+    padding: 16px 10px 14px;
     cursor: pointer;
     transition: all 0.28s cubic-bezier(0.4,0,0.2,1);
     position: relative;
@@ -145,14 +145,30 @@
   .class-card:active { transform: translateY(-2px); }
 
   .class-icon {
-    width: 64px; height: 64px;
+    width: 48px; height: 48px;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px;
-    font-size: 28px;
+    margin: 0 auto 10px;
     transition: transform 0.28s;
   }
   .class-card:hover .class-icon { transform: scale(1.1) rotate(5deg); }
+
+  /* ── Home section label ── */
+  .home-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .home-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
 
   /* ── Subject cards (View 2) ── */
   .subject-card {
@@ -614,39 +630,41 @@
     left: auto; right: 0; transform: none;
   }
 
-  /* ── Primary row 5-col → mobile 3+2 wrap ── */
-  @media (max-width: 640px) {
-    #row-primary {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
-    #row-junior {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
-    #row-senior {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
+  /* ── Unified card row — flex, fixed card width ── */
+  .class-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .class-row .class-card {
+    flex: 0 0 calc(20% - 7px);
+    min-width: 0;
   }
 
-  /* ── Class card mobile compact ── */
-  @media (max-width: 640px) {
-    .class-card {
-      padding: 14px 8px !important;
-    }
-    .class-icon {
-      width: 44px !important;
-      height: 44px !important;
-      margin-bottom: 8px !important;
-    }
-    .class-icon svg {
-      width: 20px !important;
-      height: 20px !important;
-    }
-    .class-card p:first-of-type {
-      font-size: 13px !important;
-    }
-    .class-card p:last-of-type {
-      font-size: 10px !important;
-    }
+  /* Card typography */
+  .card-title {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 1px;
+    line-height: 1.3;
+  }
+  .card-sub {
+    font-size: 10px;
+    color: var(--text3);
+    line-height: 1.2;
+  }
+
+  /* Mobile: 3-col */
+  @media (max-width: 600px) {
+    .class-row .class-card { flex: 0 0 calc(33.333% - 6px); }
+    .class-card { padding: 10px 6px 8px !important; }
+    .class-icon { width: 36px !important; height: 36px !important; margin-bottom: 6px !important; }
+    .card-title { font-size: 11px !important; }
+    .card-sub { font-size: 9px !important; }
+    .home-section-label { font-size: 9px !important; margin-bottom: 4px !important; }
   }
 
   /* ── Pb for mobile nav ── */
@@ -678,7 +696,7 @@
   <div class="relative z-10 flex flex-col min-h-screen with-mobile-nav">
 
     <!-- Top bar -->
-    <div class="flex items-center justify-between px-4 lg:px-8 py-4">
+    <div class="flex items-center justify-between px-4 lg:px-8 py-3">
       <div class="flex items-center gap-2" style="color:var(--accent-light)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         <span style="font-family:'Tiro Bangla',serif;font-size:18px;font-weight:500;color:var(--text)">পাঠশালা</span>
@@ -688,105 +706,103 @@
       </button>
     </div>
 
-    <!-- Cards area -->
-    <div class="flex-1 flex flex-col items-center justify-center px-4 py-6 lg:py-12">
+    <!-- Cards area — viewport-এ fit -->
+    <div class="flex-1 flex flex-col items-center justify-center px-4" style="overflow:hidden">
 
-      <!-- Primary row (১ম–৫ম) -->
-      <div class="w-full max-w-5xl mb-5 anim-fade-up" style="animation-delay:0.1s">
-        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">প্রাথমিক শ্রেণী</p>
-        <div id="row-primary" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(5,1fr)">
+      <div class="w-full anim-fade-up" style="max-width:860px">
+
+        <!-- প্রাথমিক -->
+        <div class="home-section-label">প্রাথমিক শ্রেণী</div>
+        <div class="class-row mb-2">
           <div class="class-card" onclick="selectClass('1')">
             <div class="class-icon" style="background:rgba(16,185,129,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">প্রথম শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 1</p>
+            <p class="card-title">প্রথম শ্রেণী</p>
+            <p class="card-sub">Class 1</p>
           </div>
           <div class="class-card" onclick="selectClass('2')">
             <div class="class-icon" style="background:rgba(52,211,153,0.12)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">দ্বিতীয় শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 2</p>
+            <p class="card-title">দ্বিতীয় শ্রেণী</p>
+            <p class="card-sub">Class 2</p>
           </div>
           <div class="class-card" onclick="selectClass('3')">
             <div class="class-icon" style="background:rgba(14,165,233,0.12)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">তৃতীয় শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 3</p>
+            <p class="card-title">তৃতীয় শ্রেণী</p>
+            <p class="card-sub">Class 3</p>
           </div>
           <div class="class-card" onclick="selectClass('4')">
             <div class="class-icon" style="background:rgba(245,158,11,0.12)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">চতুর্থ শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 4</p>
+            <p class="card-title">চতুর্থ শ্রেণী</p>
+            <p class="card-sub">Class 4</p>
           </div>
           <div class="class-card" onclick="selectClass('5')">
             <div class="class-icon" style="background:rgba(236,72,153,0.12)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f9a8d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f9a8d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">পঞ্চম শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 5</p>
+            <p class="card-title">পঞ্চম শ্রেণী</p>
+            <p class="card-sub">Class 5</p>
           </div>
         </div>
-      </div>
 
-      <!-- Junior row (৬ষ্ঠ–৮ম) -->
-      <div class="w-full max-w-5xl mb-5 anim-fade-up" style="animation-delay:0.18s">
-        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">মাধ্যমিক শ্রেণী</p>
-        <div id="row-junior" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+        <!-- মাধ্যমিক — ৩টি কার্ড, centered -->
+        <div class="home-section-label">মাধ্যমিক শ্রেণী</div>
+        <div class="class-row class-row-center mb-2">
           <div class="class-card" onclick="selectClass('6')">
             <div class="class-icon" style="background:rgba(99,102,241,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">ষষ্ঠ শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 6</p>
+            <p class="card-title">ষষ্ঠ শ্রেণী</p>
+            <p class="card-sub">Class 6</p>
           </div>
           <div class="class-card" onclick="selectClass('7')">
             <div class="class-icon" style="background:rgba(168,85,247,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">সপ্তম শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 7</p>
+            <p class="card-title">সপ্তম শ্রেণী</p>
+            <p class="card-sub">Class 7</p>
           </div>
           <div class="class-card" onclick="selectClass('8')">
             <div class="class-icon" style="background:rgba(20,184,166,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">অষ্টম শ্রেণী</p>
-            <p style="font-size:11px;color:var(--text3)">Class 8</p>
+            <p class="card-title">অষ্টম শ্রেণী</p>
+            <p class="card-sub">Class 8</p>
           </div>
         </div>
-      </div>
 
-      <!-- Senior + Admission row -->
-      <div class="w-full max-w-5xl anim-fade-up" style="animation-delay:0.26s">
-        <p class="section-label px-1" style="max-width:900px;margin:0 auto 10px">উচ্চমাধ্যমিক ও ভর্তি</p>
-        <div id="row-senior" class="grid gap-3" style="max-width:900px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+        <!-- উচ্চমাধ্যমিক ও ভর্তি — ৩টি কার্ড, centered -->
+        <div class="home-section-label">উচ্চমাধ্যমিক ও ভর্তি</div>
+        <div class="class-row class-row-center">
           <div class="class-card" onclick="selectClass('9')">
             <div class="class-icon" style="background:rgba(251,146,60,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5m4 0h10m-10 0v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0H5m4 0h10m-10 0v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">এসএসসি</p>
-            <p style="font-size:11px;color:var(--text3)">নবম–দশম (9–10)</p>
+            <p class="card-title">এসএসসি</p>
+            <p class="card-sub">নবম–দশম (9–10)</p>
           </div>
           <div class="class-card" onclick="selectClass('11')">
             <div class="class-icon" style="background:rgba(236,72,153,0.15)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--text);margin-bottom:2px">এইচএসসি</p>
-            <p style="font-size:11px;color:var(--text3)">একাদশ–দ্বাদশ (11–12)</p>
+            <p class="card-title">এইচএসসি</p>
+            <p class="card-sub">একাদশ–দ্বাদশ (11–12)</p>
           </div>
           <div class="class-card" onclick="selectClass('admission')">
-            <div class="class-icon" style="background:rgba(99,102,241,0.2);box-shadow:0 0 20px var(--accent-glow)">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
+            <div class="class-icon" style="background:rgba(99,102,241,0.2);box-shadow:0 0 16px var(--accent-glow)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
             </div>
-            <p style="font-weight:600;font-size:15px;color:var(--accent-light);margin-bottom:2px">ভর্তি</p>
-            <p style="font-size:11px;color:var(--text3)">Admission</p>
+            <p class="card-title" style="color:var(--accent-light)">ভর্তি</p>
+            <p class="card-sub">Admission</p>
           </div>
         </div>
+
       </div>
 
     </div>
