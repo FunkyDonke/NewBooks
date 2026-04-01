@@ -1122,7 +1122,7 @@ const LS_STATS   = 'smartPathshala_stats';
 const LS_LAST    = 'smartPathshala_lastRead';
 const LS_THEME   = 'theme';
 const LS_COLOR   = 'sp_color_theme';
-const PARSER_VER = 'sp_parser_v5'; // parser version বদলালে এটা বাড়াও
+const PARSER_VER = 'sp_parser_v6'; // parser version বদলালে এটা বাড়াও
 
 const CLASS_NAMES = {
   '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
@@ -1312,7 +1312,7 @@ function parseAndImportData(text, classId) {
         activeSubjects.push(sub);
 
       } else if (trimmed.startsWith('!')) {
-        const match = trimmed.match(/^!([123]+)(\*)?\s+(.*)/);
+        const match = trimmed.match(/^!([123]+)(\*)?\s*(.*)/); // space optional
         if (!match) return;
         const groupsStr = match[1];
         const isGroupOpt = !!match[2];
