@@ -1118,6 +1118,7 @@ const LS_STATS   = 'smartPathshala_stats';
 const LS_LAST    = 'smartPathshala_lastRead';
 const LS_THEME   = 'theme';
 const LS_COLOR   = 'sp_color_theme';
+const PARSER_VER = 'sp_parser_v3'; // parser version বদলালে এটা বাড়াও
 
 const CLASS_NAMES = {
   '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
@@ -1154,7 +1155,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildColorGrid();
 
   const stored = localStorage.getItem(LS_DATA);
-  if (stored) {
+  const parserOk = localStorage.getItem(PARSER_VER);
+
+  if (stored && parserOk) {
     try {
       appData = JSON.parse(stored);
       // নতুন class যোগ হলে পুরনো cache-এ নেই — auto-create করো
@@ -1175,6 +1178,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       await importFromIndex();
     }
   } else {
+    // Parser version নেই বা নতুন — পুরনো data মুছে fresh import
+    localStorage.removeItem(LS_DATA);
     await importFromIndex();
   }
 
@@ -1208,85 +1213,108 @@ async function importFromIndex() {
   }
 
   saveData();
+  localStorage.setItem(PARSER_VER, '1');
   progressData = JSON.parse(localStorage.getItem(LS_PROG) || '{}');
   hideLoading();
   showView('view-classes');
   renderHomeStats();
 }
 
-// ── TXT Parser ────────────────────────────
-// Format: Each subject on its own line (with optional prefix),
-// chapters indented below using 2 spaces or tab per level
+// ── TXT Parser (prefix-based format) ─────
+/*
+  Format rules (prefix দিয়ে level বোঝায়, indentation নয়):
+  
+  Subject lines (বই/বিষয়):
+    *বাংলা          → required subject
+    **ক্যারিয়ার শিক্ষা  → optional subject
+    !1 পদার্থবিজ্ঞান  → science division
+    !2 পৌরনীতি       → humanities division
+    !3 হিসাববিজ্ঞান   → commerce division
+    !12 ইতিহাস       → science+humanities
+    !1* জীববিজ্ঞান   → science optional
+    (no prefix)      → required subject (plain name)
+
+  Chapter lines (সূচিপত্র):
+    #শিরোনাম        → depth 1 (top-level chapter)
+    -শিরোনাম        → depth 2
+    --শিরোনাম       → depth 3
+    ---শিরোনাম      → depth 4
+
+  Empty lines are ignored.
+*/
 function parseTxtSubjects(text, classId) {
-  const lines = text.split('\n');
+  const lines = text.split('\n').map(l => l.trimEnd()).filter(l => l.trim());
   const subjects = [];
-  let current = null;
 
-  for (let line of lines) {
-    if (!line.trim()) continue;
+  for (const line of lines) {
+    const trimmed = line.trim();
 
-    // Check if it's a subject line (no leading whitespace or starts with prefix)
-    const indent = line.match(/^(\s*)/)[1].length;
-    if (indent === 0) {
-      // It's a subject line
-      const { name, type } = parseSubjectLine(line.trim());
-      current = { id: genId('s' + classId + '_'), name, type, chapters: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } };
-      subjects.push(current);
-    } else if (current) {
-      // It's a chapter line — handled recursively per subject
-      // We'll do a second-pass chapter parse
+    // ── Detect subject line ──
+    const isSubject = isSubjectLine(trimmed);
+
+    if (isSubject) {
+      const { name, type } = parseSubjectLine(trimmed);
+      subjects.push({
+        id: genId('s' + classId + '_'),
+        name, type,
+        chapters: [],
+        content: { text: '', textUrl: '', pdfs: [], videos: [], qna: [] }
+      });
+    } else if (subjects.length > 0) {
+      // Chapter line — belongs to last subject
+      const { depth, title } = parseChapterLine(trimmed);
+      const lastSubject = subjects[subjects.length - 1];
+      insertChapterAtDepth(lastSubject.chapters, title, depth);
     }
-  }
-
-  // Second pass: parse chapters per subject block
-  let subjectStarts = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const indent = line.match(/^(\s*)/)[1].length;
-    if (indent === 0) subjectStarts.push(i);
-  }
-
-  for (let s = 0; s < subjectStarts.length; s++) {
-    const start = subjectStarts[s] + 1;
-    const end   = s + 1 < subjectStarts.length ? subjectStarts[s + 1] : lines.length;
-    const chLines = lines.slice(start, end).filter(l => l.trim());
-    subjects[s].chapters = parseChapterLines(chLines, 0);
   }
 
   return subjects;
 }
 
-function parseSubjectLine(raw) {
-  // Optional: ** prefix
-  if (raw.startsWith('**')) return { name: raw.slice(2).trim(), type: 'optional' };
-  // Divisional: !1, !2, !3, !12, !1* etc.
-  const divMatch = raw.match(/^!([123]+)(\*?)\s+(.+)/);
-  if (divMatch) return { name: divMatch[3].trim(), type: divMatch[1] + (divMatch[2] || '') };
-  // Required: * prefix or plain
-  if (raw.startsWith('* ')) return { name: raw.slice(2).trim(), type: 'required' };
-  return { name: raw.trim(), type: 'required' };
+// Subject line detection: starts with *, **, !1/!2/!3/!12, or has NO chapter prefix
+function isSubjectLine(line) {
+  if (line.startsWith('**')) return true;           // optional subject
+  if (line.startsWith('!')) return true;             // divisional subject
+  if (/^\*[^#\-]/.test(line)) return true;          // *বিষয় (single star, not chapter)
+  if (line.startsWith('#')) return false;            // # = chapter
+  if (/^-+/.test(line)) return false;               // - = chapter
+  // Plain line with no prefix = subject
+  return true;
 }
 
-function parseChapterLines(lines, baseDepth) {
-  if (!lines.length) return [];
-  const minIndent = Math.min(...lines.map(l => l.match(/^(\s*)/)[1].length));
-  const groups = [];
-  let cur = null;
-  let curLines = [];
+// Parse chapter prefix to get depth and clean title
+function parseChapterLine(line) {
+  // #শিরোনাম → depth 1
+  if (line.startsWith('#')) {
+    return { depth: 1, title: line.replace(/^#+\s*/, '') };
+  }
+  // ---শিরোনাম → count dashes for depth (starts at 2)
+  const dashMatch = line.match(/^(-+)\s*(.*)/);
+  if (dashMatch) {
+    return { depth: 1 + dashMatch[1].length, title: dashMatch[2] };
+  }
+  return { depth: 1, title: line };
+}
 
-  for (const line of lines) {
-    const indent = line.match(/^(\s*)/)[1].length;
-    if (indent === minIndent) {
-      if (cur) { cur.children = parseChapterLines(curLines, minIndent + 1); groups.push(cur); }
-      cur = { id: genId('ch_'), title: line.trim(), children: [] };
-      curLines = [];
-    } else if (cur) {
-      curLines.push(line);
+// Insert chapter node at correct depth in tree
+function insertChapterAtDepth(tree, title, depth) {
+  const node = { id: genId('ch_'), title, children: [] };
+
+  if (depth <= 1 || tree.length === 0) {
+    tree.push(node);
+    return;
+  }
+
+  // Navigate to the deepest available parent
+  let parent = tree[tree.length - 1];
+  for (let d = 2; d < depth; d++) {
+    if (parent.children.length > 0) {
+      parent = parent.children[parent.children.length - 1];
+    } else {
+      break;
     }
   }
-  if (cur) { cur.children = parseChapterLines(curLines, minIndent + 1); groups.push(cur); }
-  return groups;
+  parent.children.push(node);
 }
 
 // ── ID generator ─────────────────────────
