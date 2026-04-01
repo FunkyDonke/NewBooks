@@ -1157,6 +1157,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (stored) {
     try {
       appData = JSON.parse(stored);
+      // নতুন class যোগ হলে পুরনো cache-এ নেই — auto-create করো
+      const allIds = ['1','2','3','4','5','6','7','8','9','11','admission'];
+      let dirty = false;
+      for (const cid of allIds) {
+        if (!appData.classes[cid]) {
+          appData.classes[cid] = { name: CLASS_NAMES[cid] || cid, subjects: [] };
+          dirty = true;
+        }
+      }
+      if (dirty) saveData();
       progressData = JSON.parse(localStorage.getItem(LS_PROG) || '{}');
       hideLoading();
       showView('view-classes');
@@ -1352,6 +1362,12 @@ function countLeaves(chapters) {
 
 // ── Select class → View 2 ─────────────────
 function selectClass(classId, updateHash = true) {
+  // Auto-create class if missing (e.g. old localStorage cache)
+  if (!appData.classes[classId]) {
+    appData.classes[classId] = { name: CLASS_NAMES[classId] || classId, subjects: [] };
+    saveData();
+  }
+
   currentClass = classId;
   currentDiv   = '1';
   showOptional = false;
@@ -1659,6 +1675,9 @@ function addSubjectManual() {
   const name = document.getElementById('add-subject-name').value.trim();
   const type = document.getElementById('add-subject-type').value;
   if (!name) { showToast('বিষয়ের নাম লিখুন'); return; }
+  if (!appData.classes[currentClass]) {
+    appData.classes[currentClass] = { name: CLASS_NAMES[currentClass] || currentClass, subjects: [] };
+  }
   const cls = appData.classes[currentClass];
   cls.subjects.push({ id: genId('s' + currentClass + '_'), name, type, chapters: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } });
   saveData();
@@ -1672,6 +1691,9 @@ function addSubjectManual() {
 function bulkImportSubjects() {
   const raw = document.getElementById('bulk-import-text').value.trim();
   if (!raw) { showToast('কিছু লিখুন'); return; }
+  if (!appData.classes[currentClass]) {
+    appData.classes[currentClass] = { name: CLASS_NAMES[currentClass] || currentClass, subjects: [] };
+  }
   const lines = raw.split('\n');
   const cls   = appData.classes[currentClass];
   let count   = 0;
