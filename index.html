@@ -1118,7 +1118,7 @@ const LS_STATS   = 'smartPathshala_stats';
 const LS_LAST    = 'smartPathshala_lastRead';
 const LS_THEME   = 'theme';
 const LS_COLOR   = 'sp_color_theme';
-const PARSER_VER = 'sp_parser_v3'; // parser version বদলালে এটা বাড়াও
+const PARSER_VER = 'sp_parser_v4'; // parser version বদলালে এটা বাড়াও
 
 const CLASS_NAMES = {
   '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
@@ -1198,19 +1198,25 @@ function hideLoading() {
 async function importFromIndex() {
   document.getElementById('loading-overlay').style.display = 'flex';
 
-  const classIds = ['1','2','3','4','5','6','7','8','9','11','admission'];
+  idCounters = { subject: 0, chapter: 0 }; // reset counters
   appData = { classes: {} };
 
-  for (const cid of classIds) {
-    const className = CLASS_NAMES[cid];
-    appData.classes[cid] = { name: className, subjects: [] };
-    try {
-      const res = await fetch(`index/class${cid}.txt`);
-      if (!res.ok) continue;
-      const text = await res.text();
-      appData.classes[cid].subjects = parseTxtSubjects(text, cid);
-    } catch(e) { /* file not found, skip */ }
+  // সব class-এর জন্য empty entry তৈরি করো
+  for (const cid of Object.keys(DATA_FILES)) {
+    appData.classes[cid] = { name: CLASS_NAMES[cid] || cid, subjects: [] };
   }
+
+  // Parallel fetch
+  const promises = Object.entries(DATA_FILES).map(async ([cid, filePath]) => {
+    try {
+      const res = await fetch(filePath);
+      if (!res.ok) return;
+      const text = await res.text();
+      parseAndImportData(text, cid);
+    } catch(e) { /* file not found — class stays empty */ }
+  });
+
+  await Promise.all(promises);
 
   saveData();
   localStorage.setItem(PARSER_VER, '1');
@@ -1220,106 +1226,151 @@ async function importFromIndex() {
   renderHomeStats();
 }
 
-// ── TXT Parser (prefix-based format) ─────
-/*
-  Format rules (prefix দিয়ে level বোঝায়, indentation নয়):
-  
-  Subject lines (বই/বিষয়):
-    *বাংলা          → required subject
-    **ক্যারিয়ার শিক্ষা  → optional subject
-    !1 পদার্থবিজ্ঞান  → science division
-    !2 পৌরনীতি       → humanities division
-    !3 হিসাববিজ্ঞান   → commerce division
-    !12 ইতিহাস       → science+humanities
-    !1* জীববিজ্ঞান   → science optional
-    (no prefix)      → required subject (plain name)
+// ── ID Generation (deterministic hash) ───
+let idCounters = { subject: 0, chapter: 0 };
 
-  Chapter lines (সূচিপত্র):
-    #শিরোনাম        → depth 1 (top-level chapter)
-    -শিরোনাম        → depth 2
-    --শিরোনাম       → depth 3
-    ---শিরোনাম      → depth 4
-
-  Empty lines are ignored.
-*/
-function parseTxtSubjects(text, classId) {
-  const lines = text.split('\n').map(l => l.trimEnd()).filter(l => l.trim());
-  const subjects = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // ── Detect subject line ──
-    const isSubject = isSubjectLine(trimmed);
-
-    if (isSubject) {
-      const { name, type } = parseSubjectLine(trimmed);
-      subjects.push({
-        id: genId('s' + classId + '_'),
-        name, type,
-        chapters: [],
-        content: { text: '', textUrl: '', pdfs: [], videos: [], qna: [] }
-      });
-    } else if (subjects.length > 0) {
-      // Chapter line — belongs to last subject
-      const { depth, title } = parseChapterLine(trimmed);
-      const lastSubject = subjects[subjects.length - 1];
-      insertChapterAtDepth(lastSubject.chapters, title, depth);
-    }
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
   }
-
-  return subjects;
+  return Math.abs(hash).toString(36).substring(0, 6);
 }
 
-// Subject line detection: starts with *, **, !1/!2/!3/!12, or has NO chapter prefix
-function isSubjectLine(line) {
-  if (line.startsWith('**')) return true;           // optional subject
-  if (line.startsWith('!')) return true;             // divisional subject
-  if (/^\*[^#\-]/.test(line)) return true;          // *বিষয় (single star, not chapter)
-  if (line.startsWith('#')) return false;            // # = chapter
-  if (/^-+/.test(line)) return false;               // - = chapter
-  // Plain line with no prefix = subject
-  return true;
+function generateShortId(type, title = '', classId = null) {
+  if (!title) {
+    if (type === 'subject') { idCounters.subject++; return 's' + idCounters.subject; }
+    else { idCounters.chapter++; return 'c' + idCounters.chapter; }
+  }
+  const baseId = simpleHash(title);
+  if (type === 'subject' && classId) return 's' + classId + '_' + baseId;
+  return 'c' + baseId;
 }
 
-// Parse chapter prefix to get depth and clean title
-function parseChapterLine(line) {
-  // #শিরোনাম → depth 1
-  if (line.startsWith('#')) {
-    return { depth: 1, title: line.replace(/^#+\s*/, '') };
-  }
-  // ---শিরোনাম → count dashes for depth (starts at 2)
-  const dashMatch = line.match(/^(-+)\s*(.*)/);
-  if (dashMatch) {
-    return { depth: 1 + dashMatch[1].length, title: dashMatch[2] };
-  }
-  return { depth: 1, title: line };
-}
-
-// Insert chapter node at correct depth in tree
-function insertChapterAtDepth(tree, title, depth) {
-  const node = { id: genId('ch_'), title, children: [] };
-
-  if (depth <= 1 || tree.length === 0) {
-    tree.push(node);
-    return;
-  }
-
-  // Navigate to the deepest available parent
-  let parent = tree[tree.length - 1];
-  for (let d = 2; d < depth; d++) {
-    if (parent.children.length > 0) {
-      parent = parent.children[parent.children.length - 1];
-    } else {
-      break;
-    }
-  }
-  parent.children.push(node);
-}
-
-// ── ID generator ─────────────────────────
+// fallback random id
 function genId(prefix = '') {
   return prefix + Math.random().toString(36).slice(2, 9);
+}
+
+// ── File mapping ──────────────────────────
+const DATA_FILES = {
+  '1':  'index/class1.txt',
+  '2':  'index/class2.txt',
+  '3':  'index/class3.txt',
+  '4':  'index/class4.txt',
+  '5':  'index/class5.txt',
+  '6':  'index/class6.txt',
+  '7':  'index/class7.txt',
+  '8':  'index/class8.txt',
+  '9':  'index/ssc.txt',
+  '11': 'index/hsc.txt',
+  'admission': 'index/classadmission.txt'
+};
+
+// ── Main Parser (reference doc অনুযায়ী) ──
+function parseAndImportData(text, classId) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const cid = String(classId);
+
+  if (!appData.classes[cid]) {
+    appData.classes[cid] = { name: CLASS_NAMES[cid] || cid, subjects: [] };
+  }
+
+  let activeSubjects = [];
+  const isJunior = ['1','2','3','4','5','6','7','8'].includes(cid);
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    // ── Subject line: * বা ** বা !N ──
+    if (trimmed.startsWith('*') || (trimmed.startsWith('!') && !isJunior)) {
+      activeSubjects = [];
+
+      if (trimmed.startsWith('*')) {
+        const isDouble = trimmed.startsWith('**');
+        const name = isDouble ? trimmed.substring(2).trim() : trimmed.substring(1).trim();
+        if (!name) return;
+
+        const sub = {
+          id: generateShortId('subject', name, cid),
+          name,
+          type: isDouble ? 'optional' : 'required',
+          group: 'common',
+          isOptional: isDouble,
+          isGroupOptional: false,
+          chapters: [],
+          content: { text: '', textUrl: '', pdfs: [], videos: [], qna: [] }
+        };
+        appData.classes[cid].subjects.push(sub);
+        activeSubjects.push(sub);
+
+      } else if (trimmed.startsWith('!')) {
+        const match = trimmed.match(/^!([123]+)(\*)?\s+(.*)/);
+        if (!match) return;
+        const groupsStr = match[1];
+        const isGroupOpt = !!match[2];
+        const name = match[3].trim();
+        if (!name) return;
+
+        const groupMap = { '1': 'science', '2': 'arts', '3': 'commerce' };
+        for (const char of groupsStr) {
+          const grp = groupMap[char];
+          if (!grp) continue;
+          const sub = {
+            id: generateShortId('subject', name + '_' + grp, cid),
+            name,
+            type: isGroupOpt ? char + '*' : char,
+            group: grp,
+            isOptional: false,
+            isGroupOptional: isGroupOpt,
+            chapters: [],
+            content: { text: '', textUrl: '', pdfs: [], videos: [], qna: [] }
+          };
+          appData.classes[cid].subjects.push(sub);
+          activeSubjects.push(sub);
+        }
+      }
+
+    // ── Chapter line: # বা - ──
+    } else if (activeSubjects.length > 0 &&
+               (trimmed.startsWith('#') || trimmed.startsWith('-'))) {
+
+      let depth = -1, title = '';
+      if (trimmed.startsWith('#')) {
+        depth = 0; title = trimmed.substring(1).trim();
+      } else {
+        const m = trimmed.match(/^(-+)\s*(.*)/);
+        if (m) { depth = m[1].length; title = m[2].trim(); }
+      }
+      if (depth < 0 || !title) return;
+
+      activeSubjects.forEach(sub => {
+        const node = {
+          id: generateShortId('chapter', title),
+          title, children: [],
+          content: { text: '', textUrl: '', pdfs: [], videos: [], qna: [] }
+        };
+
+        if (!sub._stack) sub._stack = [];
+        const stack = sub._stack;
+
+        if (stack.length === 0) {
+          sub.chapters.push(node);
+          stack.push({ node, depth });
+        } else {
+          while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop();
+          if (stack.length > 0) stack[stack.length - 1].node.children.push(node);
+          else sub.chapters.push(node);
+          stack.push({ node, depth });
+        }
+      });
+    }
+  });
+
+  // cleanup temp stacks
+  appData.classes[cid].subjects.forEach(s => delete s._stack);
 }
 
 // ── Storage ────────────────────────────────
@@ -1456,7 +1507,7 @@ function renderSubjects() {
     const vis = isSubjectVisible(sub);
     if (!vis) continue;
 
-    if (isDivisional && isDivisionalSubject(sub.type)) {
+    if (isDivisional && isDivisionalSubject(sub)) {
       divSubjects.push(sub);
     } else {
       reqSubjects.push(sub);
@@ -1496,21 +1547,21 @@ function renderSubjects() {
 }
 
 function isSubjectVisible(sub) {
-  const type = sub.type || 'required';
-  // Optional subjects
-  const isOpt = type === 'optional' || type.includes('*');
-  if (isOpt && !showOptional) return false;
+  // Optional subjects (isOptional বা isGroupOptional)
+  if (sub.isOptional && !showOptional) return false;
+  if (sub.isGroupOptional && !showOptional) return false;
 
-  // Divisional subjects
-  if (isDivisionalSubject(type)) {
-    const divs = type.replace('*', '').split('');
-    return divs.includes(currentDiv);
+  // Divisional: group = 'science'/'arts'/'commerce'
+  if (sub.group && sub.group !== 'common') {
+    const divGroupMap = { '1': 'science', '2': 'arts', '3': 'commerce' };
+    const selectedGroup = divGroupMap[currentDiv] || 'science';
+    return sub.group === selectedGroup;
   }
   return true;
 }
 
-function isDivisionalSubject(type) {
-  return /^[123]+\*?$/.test(type);
+function isDivisionalSubject(sub) {
+  return sub.group && sub.group !== 'common';
 }
 
 // ── Subject card ──────────────────────────
@@ -1519,7 +1570,7 @@ function createSubjectCard(sub, idx) {
   card.className = 'subject-card anim-fade-up';
   card.style.animationDelay = (idx * 0.04) + 's';
   card.dataset.subId = sub.id;
-  if (sub.type === 'optional' || (sub.type && sub.type.includes('*'))) {
+  if (sub.isOptional || sub.isGroupOptional) {
     card.classList.add('optional-subject');
   }
 
@@ -1527,7 +1578,7 @@ function createSubjectCard(sub, idx) {
   const progressPct = Math.round(progress * 100);
   const isComplete  = progressPct === 100;
 
-  const badge = getBadgeHTML(sub.type);
+  const badge = getBadgeHTML(sub);
 
   card.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px">
@@ -1559,14 +1610,11 @@ function createSubjectCard(sub, idx) {
   return card;
 }
 
-function getBadgeHTML(type) {
-  if (!type || type === 'required') return `<span class="badge badge-required">আবশ্যিক</span>`;
-  if (type === 'optional') return `<span class="badge badge-optional">ঐচ্ছিক</span>`;
-  if (/^[123]/.test(type)) {
-    const isOpt = type.includes('*');
-    return `<span class="badge badge-divisional">${isOpt ? 'বিভাগীয় ঐচ্ছিক' : 'বিভাগীয়'}</span>`;
-  }
-  return '';
+function getBadgeHTML(sub) {
+  if (sub.isGroupOptional) return `<span class="badge badge-divisional">বিভাগীয় ঐচ্ছিক</span>`;
+  if (sub.group && sub.group !== 'common') return `<span class="badge badge-divisional">বিভাগীয়</span>`;
+  if (sub.isOptional) return `<span class="badge badge-optional">ঐচ্ছিক</span>`;
+  return `<span class="badge badge-required">আবশ্যিক</span>`;
 }
 
 function calcProgress(sub) {
