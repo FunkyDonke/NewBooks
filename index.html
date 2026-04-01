@@ -902,6 +902,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 রিস্টোর ডাটা
               </div>
+              <div class="dropdown-item" onclick="forceReimport(); closeDropdown('tools-dropdown')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                ফাইল রি-ইম্পোর্ট
+              </div>
               <div class="dropdown-item" onclick="backupData(); closeDropdown('tools-dropdown')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 ব্যাকআপ
@@ -1118,7 +1122,7 @@ const LS_STATS   = 'smartPathshala_stats';
 const LS_LAST    = 'smartPathshala_lastRead';
 const LS_THEME   = 'theme';
 const LS_COLOR   = 'sp_color_theme';
-const PARSER_VER = 'sp_parser_v4'; // parser version বদলালে এটা বাড়াও
+const PARSER_VER = 'sp_parser_v5'; // parser version বদলালে এটা বাড়াও
 
 const CLASS_NAMES = {
   '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
@@ -1128,6 +1132,7 @@ const CLASS_NAMES = {
   'admission': 'ভর্তি পরীক্ষা'
 };
 const DIVISION_NAMES = { '1': 'বিজ্ঞান', '2': 'মানবিক', '3': 'ব্যবসায় শিক্ষা' };
+const DIV_GROUP_MAP  = { '1': 'science', '2': 'arts', '3': 'commerce' };
 
 const COLOR_THEMES = {
   indigo:  { accent:'#6366f1', light:'#818cf8', dark:'#4f46e5', glow:'rgba(99,102,241,0.35)',  subtle:'rgba(99,102,241,0.12)',  label:'ইন্ডিগো' },
@@ -1547,16 +1552,19 @@ function renderSubjects() {
 }
 
 function isSubjectVisible(sub) {
-  // Optional subjects (isOptional বা isGroupOptional)
-  if (sub.isOptional && !showOptional) return false;
-  if (sub.isGroupOptional && !showOptional) return false;
+  const divGroupMap = { '1': 'science', '2': 'arts', '3': 'commerce' };
+  const selectedGroup = divGroupMap[currentDiv] || 'science';
 
-  // Divisional: group = 'science'/'arts'/'commerce'
+  // বিভাগীয় বিষয় — প্রথমে group মেলে কিনা দেখো
   if (sub.group && sub.group !== 'common') {
-    const divGroupMap = { '1': 'science', '2': 'arts', '3': 'commerce' };
-    const selectedGroup = divGroupMap[currentDiv] || 'science';
-    return sub.group === selectedGroup;
+    if (sub.group !== selectedGroup) return false; // ভুল বিভাগ — দেখাবে না
+    // সঠিক বিভাগ — তারপর optional check
+    if (sub.isGroupOptional && !showOptional) return false;
+    return true;
   }
+
+  // Common বিষয় — optional check
+  if (sub.isOptional && !showOptional) return false;
   return true;
 }
 
@@ -1842,6 +1850,13 @@ function restoreData() {
     } catch { showToast('❌ ফাইল পড়া যায়নি'); }
   };
   reader.readAsText(file);
+}
+
+function forceReimport() {
+  if (!confirm('index/ ফোল্ডার থেকে নতুনভাবে ডাটা লোড হবে। বর্তমান বিষয় তালিকা প্রতিস্থাপিত হবে। চালিয়ে যাবেন?')) return;
+  localStorage.removeItem(LS_DATA);
+  localStorage.removeItem(PARSER_VER);
+  location.reload();
 }
 
 // ── Reset ─────────────────────────────────
