@@ -1108,7 +1108,7 @@ const LS_STATS   = 'smartPathshala_stats';
 const LS_LAST    = 'smartPathshala_lastRead';
 const LS_THEME   = 'theme';
 const LS_COLOR   = 'sp_color_theme';
-const PARSER_VER = 'sp_parser_v7'; // parser version বদলালে এটা বাড়াও
+const PARSER_VER = 'sp_parser_v8';
 
 const CLASS_NAMES = {
   '1': 'প্রথম শ্রেণী', '2': 'দ্বিতীয় শ্রেণী', '3': 'তৃতীয় শ্রেণী',
@@ -1494,7 +1494,6 @@ function renderSubjects() {
   const reqSubjects  = [];
 
   for (const sub of subjects) {
-    if (sub.hidden) continue;
     const vis = isSubjectVisible(sub);
     if (!vis) continue;
 
@@ -1504,6 +1503,12 @@ function renderSubjects() {
       reqSubjects.push(sub);
     }
   }
+
+  // বিভাগীয় বিষয়: isGroupOptional গুলো শেষে রাখো
+  divSubjects.sort((a, b) => {
+    if (a.isGroupOptional === b.isGroupOptional) return 0;
+    return a.isGroupOptional ? 1 : -1;
+  });
 
   // Render
   if (isDivisional && divSubjects.length) {
@@ -1585,8 +1590,9 @@ function createSubjectCard(sub, idx) {
       </div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-          <p style="font-weight:600;font-size:15px;color:var(--text)">${sub.name}</p>
+          <p style="font-weight:600;font-size:15px;color:${sub.hidden ? 'var(--text3)' : 'var(--text)'};${sub.hidden ? 'text-decoration:line-through' : ''}">${sub.name}</p>
           ${badge}
+          ${sub.hidden ? `<button onclick="event.stopPropagation();unhideSub('${sub.id}')" style="font-size:11px;padding:2px 8px;border-radius:6px;background:var(--accent-subtle);border:1px solid var(--accent);color:var(--accent-light);cursor:pointer">পুনরুদ্ধার</button>` : ''}
         </div>
         <p style="font-size:12px;color:var(--text3);margin-bottom:8px">${countLeaves(sub.chapters)} টি অধ্যায়</p>
         <div class="progress-bar">
@@ -1684,6 +1690,12 @@ function clearBulkSelection() {
   selectedCards.clear();
   hideBulkBar();
   renderSubjects();
+}
+
+function unhideSub(subId) {
+  const cls = appData.classes[currentClass];
+  const sub = cls.subjects.find(s => s.id === subId);
+  if (sub) { sub.hidden = false; saveData(); renderSubjects(); showToast('✅ বিষয় পুনরুদ্ধার হয়েছে'); }
 }
 
 function bulkToggleVisibility() {
