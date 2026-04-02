@@ -655,6 +655,108 @@
   /* ── Pb for mobile nav ── */
   .with-mobile-nav { padding-bottom: 72px; }
   @media (min-width: 1024px) { .with-mobile-nav { padding-bottom: 0; } }
+
+  /* ══ READER styles ══════════════════════ */
+
+  /* Tab bar buttons */
+  .rtab-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 14px; height: 44px;
+    font-size: 13px; font-family: 'Hind Siliguri', sans-serif;
+    color: var(--text3); background: transparent; border: none;
+    cursor: pointer; white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.18s, border-color 0.18s;
+    flex-shrink: 0;
+  }
+  .rtab-btn:hover { color: var(--text); }
+  .rtab-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); font-weight: 600; }
+  .rtab-action { color: var(--text2); border-bottom: none !important; padding: 0 12px; }
+  .rtab-action:hover { background: var(--bg3); color: var(--text); }
+
+  /* Reader tab panels */
+  .reader-tab { display: none; }
+  .reader-tab.active-tab { display: block; }
+  /* flex-based tabs need display:flex */
+  #tab-content-pdf.active-tab,
+  #tab-content-video.active-tab,
+  #tab-content-qna.active-tab,
+  #tab-content-aichat.active-tab { display: flex; }
+
+  /* Placeholder card */
+  .reader-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    padding: 48px 24px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 16px; max-width: 360px; margin: 60px auto;
+  }
+
+  /* Chapter tree */
+  .ch-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 6px; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s;
+    min-height: 32px;
+  }
+  .ch-row:hover { background: var(--bg3); }
+  .ch-row.active { background: var(--accent-subtle); }
+  .ch-row.active .ch-title { color: var(--accent-light); font-weight: 600; }
+
+  .ch-toggle {
+    width: 18px; height: 18px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px; color: var(--text3);
+    transition: transform 0.2s;
+  }
+  .ch-toggle.open { transform: rotate(90deg); }
+  .ch-icon { width: 14px; height: 14px; flex-shrink: 0; color: var(--text3); }
+  .ch-title { font-size: 13px; color: var(--text2); flex: 1; min-width: 0; line-height: 1.35; }
+  .ch-children { overflow: hidden; transition: all 0.2s; }
+
+  .ch-checkbox {
+    appearance: none; width: 14px; height: 14px; flex-shrink: 0;
+    border: 1.5px solid var(--border2); border-radius: 3px;
+    cursor: pointer; transition: all 0.15s; position: relative;
+  }
+  .ch-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+  .ch-checkbox:checked::after {
+    content: ''; position: absolute;
+    top: 0px; left: 3px; width: 4px; height: 8px;
+    border: 1.5px solid #fff; border-top: none; border-left: none;
+    transform: rotate(45deg);
+  }
+
+  /* Edit mode drag */
+  .ch-drag-handle {
+    opacity: 0; cursor: grab; color: var(--text3);
+    width: 14px; height: 14px; flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .ch-row:hover .ch-drag-handle { opacity: 1; }
+  .ch-row.ch-dragging { opacity: 0.4; }
+  .ch-row.ch-drag-over { background: var(--accent-subtle); outline: 1px dashed var(--accent); }
+
+  /* Mobile: sidebar as overlay */
+  @media (max-width: 1023px) {
+    #reader-sidebar {
+      position: fixed !important;
+      left: 0; top: 0; bottom: 0;
+      z-index: 50;
+      transform: translateX(-100%);
+      box-shadow: var(--shadow-lg);
+    }
+    #reader-sidebar.open {
+      transform: translateX(0);
+    }
+    #reader-mobile-nav { display: flex !important; }
+    #reader-content-area { height: calc(100vh - 56px) !important; }
+  }
+  @media (min-width: 1024px) {
+    #sidebar-close-btn { display: none !important; }
+    #sidebar-backdrop { display: none !important; }
+    #reader-mobile-nav { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -1098,6 +1200,277 @@
 
 
 <!-- ══════════════════════════════════════════
+     VIEW 3 — READER
+══════════════════════════════════════════ -->
+<div id="view-reader" class="view">
+  <div style="display:flex;height:100vh;overflow:hidden;position:relative">
+
+    <!-- ── Left Sidebar ── -->
+    <div id="reader-sidebar" style="
+      width:288px;flex-shrink:0;
+      display:flex;flex-direction:column;
+      background:var(--bg2);border-right:1px solid var(--border);
+      height:100vh;overflow:hidden;
+      transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    ">
+      <!-- Sidebar Header -->
+      <div style="
+        padding:12px 14px;border-bottom:1px solid var(--border);
+        display:flex;align-items:center;gap:8px;flex-shrink:0;
+      ">
+        <button class="btn-icon" onclick="showSubjects()" data-tip="বিষয় তালিকায় ফিরুন" style="flex-shrink:0">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <p style="font-weight:600;font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sidebar-subject-name">সূচিপত্র</p>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn-icon" id="sidebar-close-btn" onclick="closeSidebar()" style="display:none" data-tip="বন্ধ করুন">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <button class="btn-icon" onclick="exportChapters()" data-tip="সূচিপত্র export">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button class="btn-icon" onclick="openModal('modal-chapter-import')" data-tip="Import">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <button class="btn-icon" id="sidebar-edit-btn" onclick="toggleChapterEditMode()" data-tip="Edit mode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon" onclick="openModal('modal-add-chapter')" data-tip="অধ্যায় যোগ">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chapter Tree -->
+      <div id="chapter-tree" style="flex:1;overflow-y:auto;padding:8px 6px"></div>
+    </div>
+
+    <!-- Mobile sidebar backdrop -->
+    <div id="sidebar-backdrop" onclick="closeSidebar()" style="
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,0.55);z-index:49;
+      backdrop-filter:blur(2px);
+    "></div>
+
+    <!-- ── Content Area ── -->
+    <div id="reader-content-area" style="flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden">
+
+      <!-- Tab Bar -->
+      <div id="reader-tab-bar" style="
+        flex-shrink:0;
+        background:var(--bg2);border-bottom:1px solid var(--border);
+        display:flex;align-items:stretch;overflow-x:auto;
+        scrollbar-width:none;
+      ">
+        <!-- Back & TOC (always visible) -->
+        <button class="rtab-btn rtab-action" onclick="showSubjects()" data-tip="বিষয় তালিকা" style="border-right:1px solid var(--border)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="rtab-btn rtab-action" id="toc-toggle-btn" onclick="toggleSidebar()" data-tip="সূচিপত্র">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        </button>
+
+        <!-- Content tabs -->
+        <button class="rtab-btn" id="rtab-text" onclick="switchTab('text')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>ডিজিটাল পাঠ</span>
+        </button>
+        <button class="rtab-btn" id="rtab-pdf" onclick="switchTab('pdf')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>মূল বই</span>
+        </button>
+        <button class="rtab-btn" id="rtab-video" onclick="switchTab('video')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>টিউটোরিয়াল</span>
+        </button>
+        <button class="rtab-btn" id="rtab-qna" onclick="switchTab('qna')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>প্রশ্ন ও উত্তর</span>
+        </button>
+        <button class="rtab-btn" id="rtab-aichat" onclick="switchTab('aichat')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span>AI টিউটর</span>
+        </button>
+
+        <!-- Tools (right side) -->
+        <div style="margin-left:auto;border-left:1px solid var(--border);position:relative">
+          <button class="rtab-btn rtab-action" onclick="toggleDropdown('reader-tools-dropdown')" data-tip="টুলস">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M5.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </button>
+          <div class="dropdown-menu" id="reader-tools-dropdown" style="right:0;top:100%;min-width:190px">
+            <div class="dropdown-item" onclick="toggleTheme();closeDropdown('reader-tools-dropdown')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>
+              লাইট/ডার্ক
+            </div>
+            <div class="dropdown-item" onclick="openColorPicker();closeDropdown('reader-tools-dropdown')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+              রঙ থিম
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="backupData();closeDropdown('reader-tools-dropdown')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              ব্যাকআপ
+            </div>
+            <div class="dropdown-item" onclick="openStatsModal();closeDropdown('reader-tools-dropdown')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              পরিসংখ্যান
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chapter context bar -->
+      <div id="reader-chapter-ctx" style="
+        flex-shrink:0;padding:6px 16px;
+        background:var(--bg3);border-bottom:1px solid var(--border);
+        font-size:12px;color:var(--text3);
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        display:none;
+      "></div>
+
+      <!-- Tab content panels -->
+      <div style="flex:1;overflow:hidden;position:relative">
+
+        <!-- Tab: ডিজিটাল পাঠ -->
+        <div id="tab-content-text" class="reader-tab active-tab" style="height:100%;overflow-y:auto;padding:24px">
+          <div id="tab-text-inner" style="max-width:760px;margin:0 auto">
+            <div class="reader-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <p style="font-size:16px;font-weight:600;color:var(--text);margin:12px 0 6px">ডিজিটাল পাঠ</p>
+              <p style="font-size:13px;color:var(--text2)">বাম পাশ থেকে একটি অধ্যায় নির্বাচন করুন</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: মূল বই PDF -->
+        <div id="tab-content-pdf" class="reader-tab" style="height:100%;display:flex;overflow:hidden">
+          <div style="flex:1;display:flex;align-items:center;justify-content:center">
+            <div class="reader-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <p style="font-size:16px;font-weight:600;color:var(--text);margin:12px 0 6px">মূল বই (PDF)</p>
+              <p style="font-size:13px;color:var(--text2)">Phase 4-এ আসছে</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: টিউটোরিয়াল -->
+        <div id="tab-content-video" class="reader-tab" style="height:100%;display:flex;align-items:center;justify-content:center">
+          <div class="reader-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <p style="font-size:16px;font-weight:600;color:var(--text);margin:12px 0 6px">টিউটোরিয়াল</p>
+            <p style="font-size:13px;color:var(--text2)">Phase 5-এ আসছে</p>
+          </div>
+        </div>
+
+        <!-- Tab: প্রশ্ন ও উত্তর -->
+        <div id="tab-content-qna" class="reader-tab" style="height:100%;display:flex;align-items:center;justify-content:center">
+          <div class="reader-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <p style="font-size:16px;font-weight:600;color:var(--text);margin:12px 0 6px">প্রশ্ন ও উত্তর</p>
+            <p style="font-size:13px;color:var(--text2)">Phase 6-এ আসছে</p>
+          </div>
+        </div>
+
+        <!-- Tab: AI টিউটর -->
+        <div id="tab-content-aichat" class="reader-tab" style="height:100%;display:flex;align-items:center;justify-content:center">
+          <div class="reader-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
+            <p style="font-size:16px;font-weight:600;color:var(--text);margin:12px 0 6px">AI টিউটর</p>
+            <p style="font-size:13px;color:var(--text2)">Phase 7-এ আসছে</p>
+          </div>
+        </div>
+
+      </div><!-- end tab panels -->
+    </div><!-- end content area -->
+  </div><!-- end flex row -->
+
+  <!-- Mobile bottom nav (reader) -->
+  <div id="reader-mobile-nav" style="
+    display:none;
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--bg2);border-top:1px solid var(--border);
+    backdrop-filter:blur(12px);
+    z-index:100;padding:6px 8px 10px;
+    gap:2px;
+  ">
+    <button class="mob-nav-btn" id="mob-rtab-toc" onclick="toggleSidebar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+      <span>সূচিপত্র</span>
+    </button>
+    <button class="mob-nav-btn active" id="mob-rtab-text" onclick="switchTab('text')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>পাঠ</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-rtab-pdf" onclick="switchTab('pdf')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>PDF</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-rtab-video" onclick="switchTab('video')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span>ভিডিও</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-rtab-qna" onclick="switchTab('qna')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Q&A</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-rtab-aichat" onclick="switchTab('aichat')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/></svg>
+      <span>AI</span>
+    </button>
+  </div>
+</div>
+
+<!-- Chapter Add Modal -->
+<div class="modal-backdrop" id="modal-add-chapter">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">নতুন অধ্যায় যোগ</p>
+      <button class="btn-icon" onclick="closeModal('modal-add-chapter')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px">অধ্যায়ের শিরোনাম</label>
+        <input type="text" id="new-chapter-title" class="sp-input" placeholder="যেমন: প্রথম অধ্যায়">
+      </div>
+      <div>
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:6px">কোথায় যোগ করবে?</label>
+        <select id="new-chapter-parent" class="sp-select" style="width:100%">
+          <option value="">— root-এ (শীর্ষস্তর) —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-chapter')">বাতিল</button>
+      <button class="btn btn-accent" onclick="addChapter()">যোগ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chapter Import Modal -->
+<div class="modal-backdrop" id="modal-chapter-import">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <p style="font-size:16px;font-weight:600;color:var(--text)">সূচিপত্র ইম্পোর্ট</p>
+      <button class="btn-icon" onclick="closeModal('modal-chapter-import')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;color:var(--text2);line-height:1.8">
+        <strong style="color:var(--text)">ফরম্যাট:</strong><br>
+        <code style="color:var(--accent-light)"># অধ্যায়ের নাম</code> → শীর্ষ স্তর<br>
+        <code style="color:var(--accent-light)">- উপ-বিভাগ</code> → দ্বিতীয় স্তর<br>
+        <code style="color:var(--accent-light)">-- আরও গভীর</code> → তৃতীয় স্তর
+      </div>
+      <textarea id="chapter-import-text" class="sp-textarea" placeholder="এখানে সূচিপত্র paste করুন..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-chapter-import')">বাতিল</button>
+      <button class="btn btn-accent" onclick="importChapters()">ইম্পোর্ট করুন</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════ -->
 <script>
@@ -1379,10 +1752,28 @@ function handleHash() {
   const hash = location.hash.replace('#/', '').replace('#', '');
   const parts = hash.split('/').filter(Boolean);
   if (!parts.length) { showView('view-classes'); return; }
+
   const cid = parts[0];
-  if (CLASS_NAMES[cid]) {
-    selectClass(cid, false);
-    // future: if parts[1] → open subject etc.
+  if (!CLASS_NAMES[cid]) return;
+
+  if (parts.length === 1) {
+    // #/9 → subject list
+    if (currentClass !== cid) selectClass(cid, false);
+    else { showView('view-subjects'); renderSubjects(); }
+    return;
+  }
+
+  // #/9/subId or #/9/subId/chId
+  selectClass(cid, false);
+  const subId = parts[1];
+  const chId  = parts[2];
+  const cls   = appData.classes[cid];
+  if (!cls) return;
+  const sub = cls.subjects.find(s => s.id === subId);
+  if (!sub) return;
+  openReader(sub);
+  if (chId) {
+    setTimeout(() => selectChapter(chId), 100);
   }
 }
 
@@ -1954,10 +2345,384 @@ function buildColorGrid() {
 
 function openColorPicker() { openModal('modal-color'); }
 
-// ── Placeholder functions (next phases) ───
+// ── Reader State ──────────────────────────
+let currentSubject   = null;
+let activeChapterId  = null;
+let openAccordionIds = new Set();
+let currentTab       = 'text';
+let chapterEditMode  = false;
+let studyTimer       = null;
+let studyStartTime   = null;
+let studyChapterId   = null;
+let statsData        = {};
+
+// ── Open Reader ───────────────────────────
 function openReader(sub) {
-  showToast('📖 রিডার ভিউ — পরের আপডেটে আসছে');
+  endStudySession();
+  currentSubject  = sub;
+  activeChapterId = null;
+  openAccordionIds = new Set();
+  chapterEditMode = false;
+  currentTab = 'text';
+
+  // Load stats
+  try { statsData = JSON.parse(localStorage.getItem(LS_STATS) || '{}'); } catch(e) { statsData = {}; }
+  if (!statsData.sessionsLog) statsData.sessionsLog = [];
+  if (!statsData.totalTime) statsData.totalTime = 0;
+
+  // Update sidebar title
+  document.getElementById('sidebar-subject-name').textContent = sub.name;
+
+  // Expand all root chapters by default
+  sub.chapters.forEach(ch => openAccordionIds.add(ch.id));
+
+  renderChapters();
+  switchTab('text', false);
+  updateReaderHash();
+
+  showView('view-reader');
+
+  // Mobile sidebar closed by default
+  if (window.innerWidth < 1024) closeSidebar();
+  else openSidebarDesktop();
+
+  // Restore last chapter
+  const lastKey = `sp_last_ch_${currentClass}_${sub.id}`;
+  const lastChId = localStorage.getItem(lastKey);
+  if (lastChId) {
+    const found = findNode(sub.chapters, lastChId);
+    if (found) selectChapter(lastChId, false);
+  }
 }
+
+// ── Show Subjects (back) ──────────────────
+function showSubjects() {
+  endStudySession();
+  setHash(currentClass);
+  showView('view-subjects');
+  renderSubjects();
+  // Mobile nav reset
+  document.getElementById('reader-mobile-nav').style.display = 'none';
+}
+
+// ── Tab switching ─────────────────────────
+function switchTab(tabId, updateHash = true) {
+  currentTab = tabId;
+
+  // Desktop tab bar
+  document.querySelectorAll('.rtab-btn:not(.rtab-action)').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'rtab-' + tabId);
+  });
+
+  // Mobile nav
+  ['text','pdf','video','qna','aichat'].forEach(t => {
+    const btn = document.getElementById('mob-rtab-' + t);
+    if (btn) btn.classList.toggle('active', t === tabId);
+  });
+
+  // Panels
+  document.querySelectorAll('.reader-tab').forEach(panel => {
+    panel.classList.remove('active-tab');
+    panel.style.display = 'none';
+  });
+  const active = document.getElementById('tab-content-' + tabId);
+  if (active) {
+    active.style.display = '';
+    active.classList.add('active-tab');
+  }
+
+  if (updateHash) updateReaderHash();
+}
+
+// ── Sidebar ───────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('reader-sidebar');
+  if (sb.classList.contains('open')) closeSidebar();
+  else openSidebar();
+}
+function openSidebar() {
+  document.getElementById('reader-sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').style.display = 'block';
+  document.getElementById('sidebar-close-btn').style.display = 'flex';
+}
+function closeSidebar() {
+  document.getElementById('reader-sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').style.display = 'none';
+}
+function openSidebarDesktop() {
+  // Desktop — always visible, no class needed
+  document.getElementById('reader-sidebar').classList.remove('open');
+}
+
+// ── Chapter Tree Rendering ─────────────────
+function renderChapters() {
+  const tree = document.getElementById('chapter-tree');
+  if (!tree || !currentSubject) return;
+  tree.innerHTML = '';
+  currentSubject.chapters.forEach(ch => {
+    tree.appendChild(createChapterNode(ch, 0));
+  });
+}
+
+function createChapterNode(node, depth) {
+  const wrap = document.createElement('div');
+  wrap.dataset.chId = node.id;
+
+  const hasChildren = node.children && node.children.length > 0;
+  const isOpen = openAccordionIds.has(node.id);
+  const isActive = activeChapterId === node.id;
+  const isLeaf = !hasChildren;
+  const isDone = progressData[`${currentClass}_${currentSubject.id}_${node.id}`];
+
+  const row = document.createElement('div');
+  row.className = 'ch-row' + (isActive ? ' active' : '');
+  row.style.paddingLeft = (6 + depth * 16) + 'px';
+  row.dataset.chId = node.id;
+
+  row.innerHTML = `
+    ${chapterEditMode ? `<svg class="ch-drag-handle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>` : ''}
+    ${isLeaf ? `<input type="checkbox" class="ch-checkbox" ${isDone ? 'checked' : ''} onclick="event.stopPropagation();toggleChapterComplete('${node.id}')">` : `<span style="width:14px;flex-shrink:0"></span>`}
+    ${hasChildren
+      ? `<span class="ch-toggle ${isOpen ? 'open' : ''}" onclick="event.stopPropagation();toggleAccordion('${node.id}')">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+         </span>`
+      : `<svg class="ch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>`
+    }
+    ${chapterEditMode
+      ? `<span class="ch-title" contenteditable="true" onblur="renameChapter('${node.id}',this.textContent)" onclick="event.stopPropagation()">${node.title}</span>`
+      : `<span class="ch-title">${node.title}</span>`
+    }
+    ${chapterEditMode ? `<button onclick="event.stopPropagation();deleteChapter('${node.id}')" style="margin-left:auto;flex-shrink:0;padding:2px 4px;background:transparent;border:none;cursor:pointer;color:#f87171;opacity:0.7" title="মুছুন">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </button>` : ''}
+  `;
+
+  // Click handler
+  row.addEventListener('click', () => {
+    if (hasChildren) toggleAccordion(node.id);
+    selectChapter(node.id);
+    if (window.innerWidth < 1024) closeSidebar();
+  });
+
+  wrap.appendChild(row);
+
+  // Children
+  if (hasChildren) {
+    const childWrap = document.createElement('div');
+    childWrap.className = 'ch-children';
+    childWrap.style.display = isOpen ? 'block' : 'none';
+    node.children.forEach(child => {
+      childWrap.appendChild(createChapterNode(child, depth + 1));
+    });
+    wrap.appendChild(childWrap);
+  }
+
+  return wrap;
+}
+
+// ── Accordion ─────────────────────────────
+function toggleAccordion(chId) {
+  if (openAccordionIds.has(chId)) openAccordionIds.delete(chId);
+  else openAccordionIds.add(chId);
+  renderChapters();
+}
+
+// ── Select Chapter ────────────────────────
+function selectChapter(chId, scroll = true) {
+  endStudySession();
+  activeChapterId = chId;
+
+  // Save last chapter
+  if (currentSubject) {
+    localStorage.setItem(`sp_last_ch_${currentClass}_${currentSubject.id}`, chId);
+  }
+
+  // Find node
+  const node = currentSubject ? findNode(currentSubject.chapters, chId) : null;
+
+  // Update context bar
+  const ctx = document.getElementById('reader-chapter-ctx');
+  if (ctx && node) {
+    ctx.style.display = 'block';
+    ctx.textContent = `${currentSubject.name} › ${node.title}`;
+  }
+
+  renderChapters();
+  startStudySession(chId);
+  updateReaderHash();
+
+  // Scroll row into view
+  if (scroll) {
+    setTimeout(() => {
+      const el = document.querySelector(`.ch-row[data-ch-id="${chId}"]`);
+      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 50);
+  }
+}
+
+// ── Chapter Completion ────────────────────
+function toggleChapterComplete(chId) {
+  const key = `${currentClass}_${currentSubject.id}_${chId}`;
+  if (progressData[key]) delete progressData[key];
+  else progressData[key] = true;
+  saveProgress();
+  renderChapters();
+  // Update subject card progress bar if visible
+}
+
+// ── Study Session ─────────────────────────
+function startStudySession(chId) {
+  studyChapterId = chId;
+  studyStartTime = Date.now();
+}
+
+function endStudySession() {
+  if (!studyStartTime || !studyChapterId) return;
+  const duration = Math.round((Date.now() - studyStartTime) / 1000);
+  if (duration < 3) { studyStartTime = null; studyChapterId = null; return; }
+
+  statsData.totalTime = (statsData.totalTime || 0) + duration;
+  if (!statsData.sessionsLog) statsData.sessionsLog = [];
+  statsData.sessionsLog.unshift({ chId: studyChapterId, start: studyStartTime, duration });
+  if (statsData.sessionsLog.length > 100) statsData.sessionsLog.length = 100;
+
+  // Streak update
+  const today = new Date().toDateString();
+  if (statsData.lastStudyDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    statsData.streak = statsData.lastStudyDate === yesterday ? (statsData.streak || 0) + 1 : 1;
+    statsData.lastStudyDate = today;
+  }
+
+  localStorage.setItem(LS_STATS, JSON.stringify(statsData));
+  studyStartTime = null;
+  studyChapterId = null;
+}
+
+// ── Chapter Edit Mode ─────────────────────
+function toggleChapterEditMode() {
+  chapterEditMode = !chapterEditMode;
+  const btn = document.getElementById('sidebar-edit-btn');
+  btn.classList.toggle('active', chapterEditMode);
+  renderChapters();
+}
+
+// ── Chapter CRUD ──────────────────────────
+function addChapter() {
+  const title = document.getElementById('new-chapter-title').value.trim();
+  if (!title) { showToast('শিরোনাম লিখুন'); return; }
+  const parentId = document.getElementById('new-chapter-parent').value;
+  const node = { id: generateShortId('chapter', title + Date.now()), title, children: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } };
+
+  if (!parentId) {
+    currentSubject.chapters.push(node);
+  } else {
+    const parent = findNode(currentSubject.chapters, parentId);
+    if (parent) parent.children.push(node);
+    else currentSubject.chapters.push(node);
+  }
+  saveData();
+  renderChapters();
+  closeModal('modal-add-chapter');
+  document.getElementById('new-chapter-title').value = '';
+  showToast('✅ অধ্যায় যোগ হয়েছে');
+}
+
+function renameChapter(chId, newTitle) {
+  const node = findNode(currentSubject.chapters, chId);
+  if (node && newTitle.trim()) { node.title = newTitle.trim(); saveData(); }
+}
+
+function deleteChapter(chId) {
+  if (!confirm('এই অধ্যায় মুছে ফেলবেন?')) return;
+  currentSubject.chapters = removeNode(currentSubject.chapters, chId);
+  if (activeChapterId === chId) activeChapterId = null;
+  saveData();
+  renderChapters();
+}
+
+function removeNode(nodes, id) {
+  return nodes.filter(n => n.id !== id).map(n => ({ ...n, children: removeNode(n.children || [], id) }));
+}
+
+function importChapters() {
+  const raw = document.getElementById('chapter-import-text').value.trim();
+  if (!raw) { showToast('কিছু লিখুন'); return; }
+  const lines = raw.split('\n').filter(l => l.trim());
+  const imported = [];
+  const stack = [];
+
+  lines.forEach(line => {
+    const t = line.trim();
+    let depth = 0, title = '';
+    if (t.startsWith('#')) { depth = 0; title = t.substring(1).trim(); }
+    else { const m = t.match(/^(-+)\s*(.*)/); if (m) { depth = m[1].length; title = m[2].trim(); } }
+    if (!title) return;
+    const node = { id: generateShortId('chapter', title + Date.now() + Math.random()), title, children: [], content: { text:'', textUrl:'', pdfs:[], videos:[], qna:[] } };
+    while (stack.length > 0 && stack[stack.length-1].depth >= depth) stack.pop();
+    if (stack.length === 0) imported.push(node);
+    else stack[stack.length-1].node.children.push(node);
+    stack.push({ node, depth });
+  });
+
+  currentSubject.chapters = [...currentSubject.chapters, ...imported];
+  saveData();
+  renderChapters();
+  closeModal('modal-chapter-import');
+  document.getElementById('chapter-import-text').value = '';
+  showToast(`✅ ${imported.length} টি অধ্যায় যোগ হয়েছে`);
+}
+
+function exportChapters() {
+  if (!currentSubject) return;
+  const lines = [];
+  function walk(nodes, depth) {
+    nodes.forEach(n => {
+      const prefix = depth === 0 ? '#' : '-'.repeat(depth);
+      lines.push(prefix + ' ' + n.title);
+      if (n.children) walk(n.children, depth + 1);
+    });
+  }
+  walk(currentSubject.chapters, 0);
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `${currentSubject.name}_সূচিপত্র.txt`; a.click();
+}
+
+// ── Find Node util ────────────────────────
+function findNode(nodes, id) {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children) { const f = findNode(n.children, id); if (f) return f; }
+  }
+  return null;
+}
+
+// ── Hash update for reader ────────────────
+function updateReaderHash() {
+  if (!currentSubject) return;
+  const base = `${currentClass}/${currentSubject.id}`;
+  const hash = activeChapterId ? `${base}/${activeChapterId}` : base;
+  history.replaceState(null, '', '#/' + hash);
+}
+
+// ── Populate add chapter parent select ───
+document.getElementById('modal-add-chapter').addEventListener('click', e => {
+  if (!e.target.closest('.modal-box')) return;
+  if (!currentSubject) return;
+  const sel = document.getElementById('new-chapter-parent');
+  sel.innerHTML = '<option value="">— root-এ (শীর্ষস্তর) —</option>';
+  function addOpts(nodes, depth) {
+    nodes.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = '  '.repeat(depth) + n.title;
+      sel.appendChild(opt);
+      if (n.children) addOpts(n.children, depth + 1);
+    });
+  }
+  addOpts(currentSubject.chapters, 0);
+});
 
 function openStatsModal() {
   showToast('📊 পরিসংখ্যান — পরের আপডেটে আসছে');
