@@ -1686,7 +1686,7 @@
           <div id="mini-toc" style="display:none"></div>
 
           <!-- Scroll mode -->
-          <div id="text-scroll-view" style="flex:1;overflow-y:auto;padding:28px 24px">
+          <div id="text-scroll-view" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 24px;min-height:0">
             <div id="render-markdown" style="max-width:720px;margin:0 auto">
               <!-- initial state -->
               <div id="text-empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center">
@@ -3064,6 +3064,16 @@ function selectChapter(chId, scroll = true) {
   startStudySession(chId);
   updateReaderHash();
 
+  // Text tab: load content
+  if (node) loadTextContent(node);
+
+  // TTS বন্ধ করো
+  if (ttsActive && window.speechSynthesis) {
+    speechSynthesis.cancel();
+    ttsActive = false;
+    document.getElementById('tts-btn')?.classList.remove('active');
+  }
+
   // Scroll row into view
   if (scroll) {
     setTimeout(() => {
@@ -3480,15 +3490,29 @@ let ttsActive   = false;
 let focusMode   = false;
 let currentChapterContent = null; // active chapter content object ref
 
+// ── URL helpers ───────────────────────────
+function convertToDirectURL(url) {
+  if (!url) return url;
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
+  if (driveMatch) return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+  const docsMatch = url.match(/docs\.google\.com\/document\/d\/([^\/]+)/);
+  if (docsMatch) return `https://docs.google.com/document/d/${docsMatch[1]}/export?format=txt`;
+  return url;
+}
+
 // ── Load text content for selected chapter ─
 function loadTextContent(node) {
   if (!node) return;
   setupMarked();
-  currentChapterContent = node.content;
-  if (!currentChapterContent) {
-    currentChapterContent = { text:'', textUrl:'', pdfs:[], videos:[], qna:[] };
-    node.content = currentChapterContent;
-  }
+
+  // content object ensure করো — node.content এ assign করো যাতে appData-তে save হয়
+  if (!node.content) node.content = { text:'', textUrl:'', pdfs:[], videos:[], qna:[] };
+  // missing fields fill
+  if (!node.content.pdfs)   node.content.pdfs   = [];
+  if (!node.content.videos) node.content.videos = [];
+  if (!node.content.qna)    node.content.qna    = [];
+
+  currentChapterContent = node.content; // node.content এর reference ধরো
 
   const txt = currentChapterContent.text || '';
   const url = currentChapterContent.textUrl || '';
@@ -3496,12 +3520,11 @@ function loadTextContent(node) {
   if (txt) {
     renderMarkdown(txt);
   } else if (url) {
-    fetchAndRender(url);
+    fetchAndRender(convertToDirectURL(url));
   } else {
     showEmptyState();
   }
 
-  // Reading time estimate
   updateReadingTime(txt);
 }
 
@@ -3602,25 +3625,24 @@ function toggleTextMode() {
 
 // ── Book mode pagination ──────────────────
 function paginateBook(html) {
-  const leftH  = document.getElementById('book-left-body').clientHeight || 500;
-  const tmpDiv = document.createElement('div');
-  tmpDiv.style.cssText = `position:absolute;visibility:hidden;width:300px;font-size:${getComputedStyle(document.documentElement).getPropertyValue('--reader-font-size')||'15px'};line-height:${getComputedStyle(document.documentElement).getPropertyValue('--reader-line-height')||'1.8'};`;
-  tmpDiv.innerHTML = html;
-  document.body.appendChild(tmpDiv);
+  // HTML-কে paragraph-level block-এ ভাগ করো
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const blocks = Array.from(tmp.children);
+  if (!blocks.length) { bookPages = [{ left: html, right: '' }]; bookPageIdx = 0; renderBookPage(); return; }
 
-  // Simple page split — সব children-কে দুটো করে নিই
-  const children = Array.from(tmpDiv.children);
-  document.body.removeChild(tmpDiv);
-
-  // প্রতি 2টি block = 1 spread (left + right)
+  // প্রতি spread-এ ~6টি block (3 left + 3 right)
+  const perHalf = 3;
   bookPages = [];
-  for (let i = 0; i < children.length; i += 4) {
-    const left  = children.slice(i, i+2).map(c => c.outerHTML).join('');
-    const right = children.slice(i+2, i+4).map(c => c.outerHTML).join('');
-    bookPages.push({ left, right });
+  for (let i = 0; i < blocks.length; i += perHalf * 2) {
+    const leftBlocks  = blocks.slice(i, i + perHalf);
+    const rightBlocks = blocks.slice(i + perHalf, i + perHalf * 2);
+    bookPages.push({
+      left:  leftBlocks.map(b => b.outerHTML).join(''),
+      right: rightBlocks.map(b => b.outerHTML).join('')
+    });
   }
   if (!bookPages.length) bookPages = [{ left: html, right: '' }];
-
   bookPageIdx = 0;
   renderBookPage();
 }
@@ -3687,11 +3709,12 @@ function toggleTTS() {
 
 // ── Load from URL ─────────────────────────
 function loadFromURL() {
-  const url = document.getElementById('text-url-input').value.trim();
-  if (!url) { showToast('URL দিন'); return; }
+  const rawUrl = document.getElementById('text-url-input').value.trim();
+  if (!rawUrl) { showToast('URL দিন'); return; }
+  const url  = convertToDirectURL(rawUrl);
   const save = document.getElementById('text-url-save').checked;
   if (save && currentChapterContent) {
-    currentChapterContent.textUrl = url;
+    currentChapterContent.textUrl = rawUrl; // original URL সেভ করো
     saveData();
   }
   closeModal('modal-text-url');
@@ -3861,16 +3884,7 @@ function highlightTextInContainer(container, searchText, color, hlId) {
 }
 
 // ── Hook into selectChapter for text load ─
-const _origSelectChapter = selectChapter;
-function selectChapter(chId, scroll = true) {
-  _origSelectChapter(chId, scroll);
-  if (currentSubject) {
-    const node = findNode(currentSubject.chapters, chId);
-    if (node) loadTextContent(node);
-  }
-  // TTS বন্ধ করো
-  if (ttsActive) { speechSynthesis.cancel(); ttsActive = false; document.getElementById('tts-btn')?.classList.remove('active'); }
-}
+// (merged directly into selectChapter above — no override needed)
 
 // Apply stored settings on page load
 document.addEventListener('DOMContentLoaded', () => {
